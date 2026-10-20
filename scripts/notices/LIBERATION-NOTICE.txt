@@ -1,0 +1,14 @@
+LIBERATION SANS 1.05 — GPL version 2 with font exception
+
+Copyright © 2007 Ascender Corporation. All rights reserved.
+Liberation is a trademark of Red Hat, Inc. registered in U.S. Patent and Trademark Office and certain other jurisdictions.
+
+Liberation Sans 1.05 is distributed unmodified under the GNU General Public
+License version 2 with the Liberation font exception. The exception permits
+embedding the font or unaltered portions of it in documents without causing
+the resulting documents to be covered by the GNU General Public License.
+Embedding does not by itself make documents GPL-licensed. This exception
+does not otherwise remove the license requirements that apply to the font.
+
+GPL version 2: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+Original font metadata license reference: http://www.ascendercorp.com/liberation.html

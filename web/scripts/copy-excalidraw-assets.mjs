@@ -4,6 +4,7 @@
 import { cpSync, existsSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeFontNotices } from "../../scripts/font-notices.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 // The package's `exports` map hides package.json, so walk up node_modules dirs.
@@ -24,4 +25,5 @@ if (!existsSync(src)) {
 }
 rmSync(dest, { recursive: true, force: true });
 cpSync(src, dest, { recursive: true });
+writeFontNotices(dest);
 console.log(`copy-excalidraw-assets: ${src} -> ${dest}`);

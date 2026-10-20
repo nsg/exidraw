@@ -15,6 +15,7 @@ RUN npm run build \
 
 # node:24-bookworm-slim
 FROM docker.io/library/node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS runtime
+LABEL org.opencontainers.image.licenses="MIT"
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=8080 \
@@ -24,6 +25,8 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 COPY --from=build /app/package.json ./
+COPY --from=build /app/LICENSE /app/THIRD_PARTY_NOTICES.md ./
+COPY --from=build /app/web/dist/third-party-licenses.txt ./third-party-licenses.txt
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/shared/package.json ./shared/
 COPY --from=build /app/shared/dist ./shared/dist

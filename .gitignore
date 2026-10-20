@@ -17,3 +17,5 @@ coverage/
 .claude-sandbox/
 .DS_Store
 *.log
+
+/THIRD_PARTY_LICENSES.txt

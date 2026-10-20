@@ -3,6 +3,8 @@ import { cp, mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
+import { writeFontNotices } from "../../scripts/font-notices.mjs";
 
 const server = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = resolve(server, "renderer-dist");
@@ -33,3 +35,8 @@ await cp(resolve(server, "renderer/index.html"), resolve(output, "index.html"));
 await cp(resolve(packageDir, "dist/prod/fonts"), resolve(output, "fonts"), {
   recursive: true,
 });
+writeFontNotices(resolve(output, "fonts"));
+execFileSync(process.execPath, [
+  resolve(server, "../scripts/third-party-licenses.mjs"),
+  resolve(output, "third-party-licenses.txt"),
+], { stdio: "inherit" });

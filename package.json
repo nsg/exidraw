@@ -14,14 +14,15 @@
     "web"
   ],
   "scripts": {
-    "build": "npm run build -w shared && npm run build -w web && npm run build -w server",
+    "build": "npm run build -w shared && npm run build -w web && node scripts/third-party-licenses.mjs web/dist/third-party-licenses.txt && npm run build -w server",
     "build:shared": "npm run build -w shared",
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "test": "node --test scripts/third-party-licenses.test.mjs && npm run test --workspaces --if-present",
     "e2e": "npm run e2e -w web",
-    "clean": "rm -rf shared/dist server/dist server/renderer-dist web/dist"
+    "clean": "rm -rf shared/dist server/dist server/renderer-dist web/dist",
+    "licenses": "node scripts/third-party-licenses.mjs THIRD_PARTY_LICENSES.txt"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

@@ -1,0 +1,262 @@
+{
+  "package": "@excalidraw/excalidraw",
+  "version": "0.18.1",
+  "extraction": "Node.js Brotli decompression and WOFF2 name-table parsing via scripts/extract-font-notices.mjs; no network or downloaded license text. Extracted text files preserve decoded metadata exactly, including whitespace and lack of final newline.",
+  "discrepancies": [
+    "All four installed Comic Shanns WOFF2 shards have no nameID 13. Their full MIT license is stored in nameID 0; that actual record is preserved.",
+    "Installed Xiaolai shards have no nameID 13, so the complete OFL 1.1 text comes from Virgil nameID 13.",
+    "Excalifont trademark wording and per-family license classifications were supplied by the task. Excalifont metadata provides the copyright but no nameID 7 trademark record.",
+    "Liberation nameID 0 uses a literal backtick before 2007. The notice renders it as the copyright symbol; the original extracted record is preserved below.",
+    "LIBERATION-NOTICE.txt is a notice summarizing the task-supplied GPL version 2 with font exception classification and document embedding effect, not an extracted full GPL text."
+  ],
+  "extractedTexts": [
+    {
+      "file": "OFL-1.1.txt",
+      "sourceFilename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Virgil/Virgil-Regular.woff2",
+      "record": {
+        "platform": 3,
+        "encoding": 1,
+        "language": 1033,
+        "nameID": 13
+      },
+      "sha256": "697383c6addd5dd14d7e1ff053aaa44520ce86a58589eef1f9985ab66e08db08"
+    },
+    {
+      "file": "ComicShanns-MIT.txt",
+      "sourceFilename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2",
+      "record": {
+        "platform": 3,
+        "encoding": 1,
+        "language": 1033,
+        "nameID": 0
+      },
+      "sha256": "e001cdb75c49d99c5f4f35381e71fe2a60c88d5afe49da5cbd8fd1c7a34cc432"
+    }
+  ],
+  "sources": [
+    {
+      "family": "Virgil",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Virgil/Virgil-Regular.woff2",
+      "sha256": "2279cf7daf1c42a3a53b2c1437ad72f0050efb67ac263e0245f67612fd766714",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "Copyright (c) 2011 by Your Own Font Foundry. All rights reserved."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 7,
+          "text": "Virgil YOFF is a trademark of Your Own Font Foundry."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 13,
+          "text": "This Font Software is licensed under the SIL Open Font License, Version 1.1.\nThis license is copied below, and is also available with a FAQ at:\nhttp://scripts.sil.org/OFL\n\n\n-----------------------------------------------------------\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007\n-----------------------------------------------------------\n\nPREAMBLE\nThe goals of the Open Font License (OFL) are to stimulate worldwide\ndevelopment of collaborative font projects, to support the font creation\nefforts of academic and linguistic communities, and to provide a free and\nopen framework in which fonts may be shared and improved in partnership\nwith others.\n\nThe OFL allows the licensed fonts to be used, studied, modified and\nredistributed freely as long as they are not sold by themselves. The\nfonts, including any derivative works, can be bundled, embedded, \nredistributed and/or sold with any software provided that any reserved\nnames are not used by derivative works. The fonts and derivatives,\nhowever, cannot be released under any other type of license. The\nrequirement for fonts to remain under this license does not apply\nto any document created using the fonts or their derivatives.\n\nDEFINITIONS\n\"Font Software\" refers to the set of files released by the Copyright\nHolder(s) under this license and clearly marked as such. This may\ninclude source files, build scripts and documentation.\n\n\"Reserved Font Name\" refers to any names specified as such after the\ncopyright statement(s).\n\n\"Original Version\" refers to the collection of Font Software components as\ndistributed by the Copyright Holder(s).\n\n\"Modified Version\" refers to any derivative made by adding to, deleting,\nor substituting -- in part or in whole -- any of the components of the\nOriginal Version, by changing formats or by porting the Font Software to a\nnew environment.\n\n\"Author\" refers to any designer, engineer, programmer, technical\nwriter or other person who contributed to the Font Software.\n\nPERMISSION & CONDITIONS\nPermission is hereby granted, free of charge, to any person obtaining\na copy of the Font Software, to use, study, copy, merge, embed, modify,\nredistribute, and sell modified and unmodified copies of the Font\nSoftware, subject to the following conditions:\n\n1) Neither the Font Software nor any of its individual components,\nin Original or Modified Versions, may be sold by itself.\n\n2) Original or Modified Versions of the Font Software may be bundled,\nredistributed and/or sold with any software, provided that each copy\ncontains the above copyright notice and this license. These can be\nincluded either as stand-alone text files, human-readable headers or\nin the appropriate machine-readable metadata fields within text or\nbinary files as long as those fields can be easily viewed by the user.\n\n3) No Modified Version of the Font Software may use the Reserved Font\nName(s) unless explicit written permission is granted by the corresponding\nCopyright Holder. This restriction only applies to the primary font name as\npresented to the users.\n\n4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font\nSoftware shall not be used to promote, endorse or advertise any\nModified Version, except to acknowledge the contribution(s) of the\nCopyright Holder(s) and the Author(s) or with their explicit written\npermission.\n\n5) The Font Software, modified or unmodified, in part or in whole,\nmust be distributed entirely under this license, and must not be\ndistributed under any other license. The requirement for fonts to\nremain under this license does not apply to any document created\nusing the Font Software.\n\nTERMINATION\nThis license becomes null and void if any of the above conditions are\nnot met.\n\nDISCLAIMER\nTHE FONT SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT\nOF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE\nCOPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,\nINCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL\nDAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING\nFROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM\nOTHER DEALINGS IN THE FONT SOFTWARE."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 14,
+          "text": "http://scripts.sil.org/OFL"
+        }
+      ]
+    },
+    {
+      "family": "Excalifont",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Excalifont/Excalifont-Regular-349fac6ca4700ffec595a7150a0d1e1d.woff2",
+      "sha256": "a0637cff365c7344d2f7a15905a1f74dceaf56b5ac2ff913d150358bed6921f0",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "Copyright (c) 2024 by Excalidraw. All rights reserved."
+        }
+      ]
+    },
+    {
+      "family": "Xiaolai",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Xiaolai/Xiaolai-Regular-019d66dcad46dc156b162d267f981c20.woff2",
+      "sha256": "7404ad8086cf238269c6f6aa3ecb754dac903c7b28be88d1f683b9eab7c463e6",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "Copyright © 2020 LXGW"
+        }
+      ]
+    },
+    {
+      "family": "Nunito",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTA3j6zbXWjgevT5.woff2",
+      "sha256": "e512f2d7c9fe062b1acf8f6ea64d4bfd89a77d26728150977627e445c7b6e937",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)"
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 14,
+          "text": "https://scripts.sil.org/OFL"
+        }
+      ]
+    },
+    {
+      "family": "Lilita",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Lilita/Lilita-Regular-i7dPIFZ9Zz-WBtRtedDbYE98RXi4EwSsbg.woff2",
+      "sha256": "2b6568c7a0f16300bc6c8d292bd426c361fcdb40699c2cbfab2bd3e9e6993dea",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "Copyright (c) 2011 Juan Montoreano (juan@remolacha.biz), with Reserved Font Names \"Lilita One\""
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 14,
+          "text": "http://scripts.sil.org/OFL"
+        }
+      ]
+    },
+    {
+      "family": "Assistant",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Assistant/Assistant-Bold.woff2",
+      "sha256": "e0cdd332ce039770e93ec44336b6db65f931940f42b0342aad35a06e7f991d29",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "Copyright 2020 The Assistant Project Authors (https://github.com/hafontia/Assistant). Copyright 2010 The Source Sans Pro Authors (https://github.com/adobe-fonts/source-sans-pro), with Reserved Font Name 'Source'. Source is a trademark of Adobe Systems Incorporated in the United States and/or other countries."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 7,
+          "text": "Source is a trademark of Adobe Systems Incorporated in the United States and/or other countries."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 13,
+          "text": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL"
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 14,
+          "text": "http://scripts.sil.org/OFL"
+        }
+      ]
+    },
+    {
+      "family": "Cascadia",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Cascadia/CascadiaCode-Regular.woff2",
+      "sha256": "5bce041e0fcce617e35efbc335b1372d27a84acb65fb464c65ff80ab3424a885",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "© 2020 Microsoft Corporation. All Rights Reserved."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 7,
+          "text": "Cascadia Code is a trademark of the Microsoft group of companies."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 13,
+          "text": "Microsoft supplied font. You may use this font to create, display, and print content as permitted by the license terms or terms of use, of the Microsoft product, service, or content in which this font was included. You may only (i) embed this font in content as permitted by the embedding restrictions included in this font; and (ii) temporarily download this font to a printer or other output device to help print content. Any other use is prohibited.\n \nThe following license, based on the SIL Open Font license (https://scripts.sil.org/OFL), applies to this font. Additional license terms may be found on the GitHub repository for this font (https://github.com/microsoft/cascadia-code/blob/master/LICENSE).\n \nPermission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the following conditions:\n \n1) Neither the Font Software nor any of its individual components, in Original or Modified Versions, may be sold by itself.\n \n2) Original or Modified Versions of the Font Software may be bundled, redistributed and/or sold with any software, provided that each copy contains the above copyright notice and this license. These can be included either as stand-alone text files, human-readable headers or in the appropriate machine-readable metadata fields within text or binary files as long as those fields can be easily viewed by the user.\n \n3) No Modified Version of the Font Software may use the Reserved Font Name(s) unless explicit written permission is granted by the corresponding Copyright Holder. This restriction only applies to the primary font name as presented to the users.\n \n4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font Software shall not be used to promote, endorse or advertise any Modified Version, except to acknowledge the contribution(s) of the Copyright Holder(s) and the Author(s) or with their explicit written permission.\n \n5) The Font Software, modified or unmodified, in part or in whole, must be distributed entirely under this license, and must not be distributed under any other license. The requirement for fonts to remain under this license does not apply to any document created using the Font Software.\n \nTHE FONT SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 14,
+          "text": "https://scripts.sil.org/OFL"
+        }
+      ]
+    },
+    {
+      "family": "ComicShanns",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2",
+      "sha256": "fa930fceb529a4b51ba3055d590302722c27704f6a6357495873950136b1e2ea",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "MIT License\n\nCopyright (c) 2018 Shannon Miwa\nCopyright (c) 2023 Jesus Gonzalez\nCopyright (c) 2023 Rodrigo Batista de Moraes\nCopyright (c) 2024 Fini Jastrow\nCopyright (c) 2024 Kyle Beechly\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
+        }
+      ]
+    },
+    {
+      "family": "Liberation",
+      "filename": "node_modules/@excalidraw/excalidraw/dist/prod/fonts/Liberation/LiberationSans-Regular.woff2",
+      "sha256": "006a2b28cbbeeaec937d1b367d0949f5f48ef4b2e7b4e1d8dc7a799d2d639be8",
+      "records": [
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 0,
+          "text": "Digitized data `2007 Ascender Corporation. All rights reserved."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 7,
+          "text": "Liberation is a trademark of Red Hat, Inc. registered in U.S. Patent and Trademark Office and certain other jurisdictions."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 13,
+          "text": "Use of this Liberation font software is subject to the license agreement under which you accepted the Liberation font software."
+        },
+        {
+          "platform": 3,
+          "encoding": 1,
+          "language": 1033,
+          "nameID": 14,
+          "text": "http://www.ascendercorp.com/liberation.html"
+        }
+      ]
+    }
+  ]
+}
