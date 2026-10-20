@@ -1,0 +1,30 @@
+{
+  "name": "exidraw",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted multiplayer Excalidraw with Entra login, folders, permissions and an MCP endpoint for agents",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "build": "npm run build -w shared && npm run build -w web && npm run build -w server",
+    "build:shared": "npm run build -w shared",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "e2e": "npm run e2e -w web",
+    "clean": "rm -rf shared/dist server/dist server/renderer-dist web/dist"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
+  }
+}

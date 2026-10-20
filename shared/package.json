@@ -1,0 +1,31 @@
+{
+  "name": "@exidraw/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Contracts shared by server and web: protocol, REST, permissions, MCP schemas, constants",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "@excalidraw/excalidraw": "0.18.1"
+  },
+  "devDependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
+    "vitest": "5.0.5"
+  }
+}

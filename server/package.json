@@ -1,0 +1,39 @@
+{
+  "name": "@exidraw/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "exidraw backend: HTTP/WS/MCP server, SQLite store, headless renderer",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build-renderer.mjs",
+    "build:renderer": "node scripts/build-renderer.mjs",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node scripts/build-renderer.mjs && vitest run"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
+    "@excalidraw/mermaid-to-excalidraw": "2.2.2",
+    "@exidraw/shared": "0.1.0",
+    "@hono/node-server": "2.1.5",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "hono": "4.13.13",
+    "openid-client": "6.8.8",
+    "pino": "10.4.0",
+    "playwright": "1.64.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "ws": "8.22.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/ws": "8.18.2",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}
