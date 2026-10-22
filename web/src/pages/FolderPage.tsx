@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type JSX, type MouseEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import {
   MAX_ELEMENTS_PER_ROOM,
@@ -15,8 +15,8 @@ import {
 import { api, ApiRequestError, errorMessage } from "../api";
 import { ConfirmDialog, PromptDialog } from "../components/Modal";
 import { ShareDialog, type ShareTarget } from "../components/ShareDialog";
-import { AccessChips, AccessDialog, PeopleIcon, accessTitle } from "../components/AccessDialog";
-import { FolderIcon, MoveDialog, RoomIcon, type MoveTarget } from "../components/MoveDialog";
+import { AccessDialog, AccessSummary, PeopleIcon, accessTitle } from "../components/AccessDialog";
+import { MoveDialog, type MoveTarget } from "../components/MoveDialog";
 import { useToast } from "../components/Toasts";
 import {
   DRAWING_FILE_ACCEPT,
@@ -27,6 +27,21 @@ import {
   uploadElements,
 } from "../importing";
 import { NotFoundPage } from "./NotFoundPage";
+import { DrawingSketch, FolderSketch, MarginDoodles, RowRule, SheetOnBoard } from "../folder/Sheet";
+import {
+  DeleteIcon,
+  DotsIcon,
+  DropIcon,
+  LinkIcon,
+  MoveIcon,
+  NewFolderIcon,
+  PlusIcon,
+  RenameIcon,
+  SearchIcon,
+  ShareIcon,
+  UploadIcon,
+} from "../folder/icons";
+import { PencilOutline, Scribble, StartHint, useElementSize } from "../sketch/Paper";
 import { ROLE_LABEL, absoluteUrl, copyText, folderLabel, formatDate, formatRelative } from "../util";
 
 type Row = { kind: "folder"; node: FolderInfo } | { kind: "room"; node: RoomInfo };
@@ -40,6 +55,11 @@ type DialogState =
   | { type: "share"; target: ShareTarget }
   | { type: "access"; target: ShareTarget; role: Role | null }
   | null;
+
+/** The sheet's entrance (drop, tape, pencil strokes) plays once per page load, not per folder or search. */
+let introPlayed = false;
+/** How long the entrance stays on once the listing shows; its last strokes end before this. */
+const INTRO_MS = 3200;
 
 function rowTarget(row: Row): ShareTarget {
   return {
@@ -74,6 +94,10 @@ export function FolderPage() {
   const [dragging, setDragging] = useState(false);
   const uploadingRef = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [intro, setIntro] = useState(() => !introPlayed);
+  useEffect(() => {
+    introPlayed = true;
+  }, []);
 
   // Latest folder requested; a slower response for a folder we left is dropped.
   const wantedFolder = useRef(folderId);
@@ -102,6 +126,14 @@ export function FolderPage() {
   useEffect(() => {
     document.title = tree ? `${folderLabel(tree.folder)} · exidraw` : "exidraw";
   }, [tree]);
+
+  // Rows and doodles animate from when they mount, so a slow first load must not cut the entrance short.
+  const loaded = tree !== null;
+  useEffect(() => {
+    if (!intro || !loaded) return;
+    const timer = window.setTimeout(() => setIntro(false), INTRO_MS);
+    return () => window.clearTimeout(timer);
+  }, [intro, loaded]);
 
   // Bumped to re-run the current search, e.g. after sharing changed the access column.
   const [searchRun, setSearchRun] = useState(0);
@@ -200,7 +232,17 @@ export function FolderPage() {
 
   if (notFound) return <NotFoundPage message="This folder does not exist, or you do not have access to it." />;
   if (error) return <div className="alert alert--error">{error}</div>;
-  if (!tree) return <p className="muted">Loading…</p>;
+  const pageClass = `folder-page${intro ? " folder-page--intro" : ""}`;
+  // Same element tree as below, so the sheet stays put while a folder loads.
+  if (!tree) {
+    return (
+      <div className={pageClass}>
+        <SheetOnBoard>
+          <p className="sheet__loading">Loading…</p>
+        </SheetOnBoard>
+      </div>
+    );
+  }
 
   const canShare = roleAtLeast(role, REQUIRED_ROLE.writeGrants);
 
@@ -213,134 +255,185 @@ export function FolderPage() {
         ...tree.folders.map((f) => ({ kind: "folder" as const, node: f })),
         ...tree.rooms.map((r) => ({ kind: "room" as const, node: r })),
       ];
+  // Only owners get the access lists; without any, the column would just be empty.
+  const showAccess = rows.some((row) => row.node.access);
+  const folderCount = rows.filter((row) => row.kind === "folder").length;
+  const roomCount = rows.length - folderCount;
 
   const closeDialog = () => setDialog(null);
   const folderTarget: ShareTarget = { kind: "folder", id: tree.folder.id, name: folderLabel(tree.folder) };
+  const pickFiles = () => fileInput.current?.click();
 
   return (
-    <div className="folder-page">
-      <div className="page-header">
-        <nav className="breadcrumbs" aria-label="Breadcrumbs">
-          {tree.breadcrumbs.map((b) => (
-            <span key={b.id}>
-              <Link to={b.id === ROOT_FOLDER_ID ? SPA_ROUTES.root : SPA_ROUTES.folder(b.id)}>{folderLabel(b)}</Link>
-              <span className="sep">/</span>
+    <div className={pageClass}>
+      <SheetOnBoard margin={<MarginDoodles dropHint={canCreate} />}>
+        <nav className="sheet__head" aria-label="Breadcrumbs">
+          {tree.breadcrumbs.length > 0 && (
+            <span className="crumbs">
+              {tree.breadcrumbs.map((b) => (
+                <span key={b.id}>
+                  <Link to={b.id === ROOT_FOLDER_ID ? SPA_ROUTES.root : SPA_ROUTES.folder(b.id)}>{folderLabel(b)}</Link>
+                  <span className="sep">/</span>
+                </span>
+              ))}
             </span>
-          ))}
-          <h1>{folderLabel(tree.folder)}</h1>
-          {role && <span className={`badge badge--${role}`}>{ROLE_LABEL[role]}</span>}
+          )}
+          <h1 className="sheet__title">
+            <Scribble>{folderLabel(tree.folder)}</Scribble>
+          </h1>
           {role && (
-            <button
-              className="access-button"
-              aria-label="Who has access"
-              title={tree.folder.access ? accessTitle(tree.folder.access) : "Who has access"}
-              onClick={() => setDialog({ type: "access", target: folderTarget, role })}
-            >
-              <PeopleIcon />
-              {tree.folder.access && <AccessChips entries={tree.folder.access} />}
-            </button>
+            <span className="sheet__meta">
+              <RoleMark role={role} />
+              <button
+                className="access-button"
+                aria-label="Who has access"
+                title={tree.folder.access ? accessTitle(tree.folder.access) : "Who has access"}
+                onClick={() => setDialog({ type: "access", target: folderTarget, role })}
+              >
+                {tree.folder.access && tree.folder.access.length > 0 ? (
+                  <AccessSummary entries={tree.folder.access} />
+                ) : (
+                  <>
+                    <PeopleIcon />
+                    {tree.folder.access ? "Not shared" : "Who has access"}
+                  </>
+                )}
+              </button>
+            </span>
           )}
         </nav>
-        <div className="page-header__actions">
-          <input
-            className="search"
-            type="search"
-            placeholder="Search drawings…"
-            aria-label="Search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+
+        <div className="sheet__tools">
+          <label className="sheet__search">
+            <SearchIcon />
+            <input
+              type="search"
+              placeholder="Search drawings…"
+              aria-label="Search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <span className="spacer" />
           {canShare && (
-            <button
-              className="btn"
-              onClick={() => setDialog({ type: "share", target: folderTarget })}
-            >
+            <button className="sketch-btn" onClick={() => setDialog({ type: "share", target: folderTarget })}>
+              <ShareIcon />
               Share
             </button>
           )}
           {canCreate && (
             <>
-              <button className="btn" onClick={() => setDialog({ type: "newFolder" })}>
+              <button className="sketch-btn" onClick={() => setDialog({ type: "newFolder" })}>
+                <NewFolderIcon />
                 New folder
               </button>
-              <UploadButton uploading={uploading} onClick={() => fileInput.current?.click()} />
-              <button className="btn btn--primary" onClick={() => setDialog({ type: "newRoom" })}>
+              <UploadButton uploading={uploading} onClick={pickFiles} />
+              <button className="sketch-btn sketch-btn--primary sheet__new" onClick={() => setDialog({ type: "newRoom" })}>
+                <PlusIcon />
                 New drawing
               </button>
             </>
           )}
         </div>
-      </div>
 
-      {results && (
-        <p className="muted">
-          {rows.length} result{rows.length === 1 ? "" : "s"} for “{query.trim()}”
-        </p>
-      )}
+        {results && (
+          <p className="sheet__results">
+            {rows.length} result{rows.length === 1 ? "" : "s"} for “{query.trim()}”
+          </p>
+        )}
 
-      {rows.length === 0 ? (
-        <div className="empty">
-          {results ? (
-            <p>Nothing matches your search.</p>
-          ) : (
-            <>
-              <p>This folder is empty.</p>
+        {rows.length === 0 ? (
+          <div className="sheet__empty">
+            {results ? (
+              <p className="sheet__empty-title">Nothing matches your search.</p>
+            ) : (
+              <>
+                <p className="sheet__empty-title">This folder is empty.</p>
+                {canCreate && (
+                  <>
+                    <div className="sheet__empty-actions">
+                      <span className="sheet__cta">
+                        <StartHint label="start here!" />
+                        <button className="sketch-btn sketch-btn--primary" onClick={() => setDialog({ type: "newRoom" })}>
+                          <PlusIcon />
+                          Create a drawing
+                        </button>
+                      </span>
+                      <UploadButton uploading={uploading} onClick={pickFiles} />
+                    </div>
+                    <p className="hint">You can also drop .excalidraw files here.</p>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <>
+            <table className="listing">
+              <thead>
+                <tr>
+                  <th>
+                    Name
+                    <RowRule id="listing-head" double />
+                  </th>
+                  <th className="listing__role">Your access</th>
+                  <th className="listing__updated">Updated</th>
+                  {showAccess && <th className="listing__access">Who has access</th>}
+                  <th className="listing__actions" aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <NodeRow
+                    key={`${row.kind}:${row.node.id}`}
+                    row={row}
+                    index={i}
+                    inFolder={!results}
+                    showAccess={showAccess}
+                    onAccess={() => setDialog({ type: "access", target: rowTarget(row), role: row.node.role })}
+                    onAction={(action) => {
+                      const name = row.node.name;
+                      const parentId = row.kind === "folder" ? (row.node.parentId ?? ROOT_FOLDER_ID) : row.node.folderId;
+                      switch (action) {
+                        case "rename":
+                          return setDialog({ type: "rename", row });
+                        case "delete":
+                          return setDialog({ type: "delete", row });
+                        case "move":
+                          return setDialog({ type: "move", target: { kind: row.kind, id: row.node.id, name, parentId } });
+                        case "share":
+                          return setDialog({ type: "share", target: rowTarget(row) });
+                        case "copy":
+                          return void copyText(absoluteUrl(SPA_ROUTES.room(row.node.id))).then(
+                            (ok) => ok && notify("Link copied", "success"),
+                          );
+                      }
+                    }}
+                  />
+                ))}
+              </tbody>
+            </table>
+            <footer className="sheet__foot">
+              <span>
+                {plural(folderCount, "folder")}, {plural(roomCount, "drawing")}
+              </span>
               {canCreate && (
-                <>
-                  <div className="empty__actions">
-                    <button className="btn btn--primary" onClick={() => setDialog({ type: "newRoom" })}>
-                      Create a drawing
-                    </button>
-                    <UploadButton uploading={uploading} onClick={() => fileInput.current?.click()} />
-                  </div>
-                  <p className="hint">You can also drop .excalidraw files here.</p>
-                </>
+                <span className="sheet__drop-hint">
+                  <DropIcon />
+                  drop .excalidraw files anywhere on this sheet
+                </span>
               )}
-            </>
-          )}
-        </div>
-      ) : (
-        <table className="nodes">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Your access</th>
-              <th>Updated</th>
-              <th>Who has access</th>
-              <th aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <NodeRow
-                key={`${row.kind}:${row.node.id}`}
-                row={row}
-                inFolder={!results}
-                onAccess={() => setDialog({ type: "access", target: rowTarget(row), role: row.node.role })}
-                onAction={(action) => {
-                  const name = row.node.name;
-                  const parentId = row.kind === "folder" ? (row.node.parentId ?? ROOT_FOLDER_ID) : row.node.folderId;
-                  switch (action) {
-                    case "rename":
-                      return setDialog({ type: "rename", row });
-                    case "delete":
-                      return setDialog({ type: "delete", row });
-                    case "move":
-                      return setDialog({ type: "move", target: { kind: row.kind, id: row.node.id, name, parentId } });
-                    case "share":
-                      return setDialog({ type: "share", target: rowTarget(row) });
-                    case "copy":
-                      return void copyText(absoluteUrl(SPA_ROUTES.room(row.node.id))).then(
-                        (ok) => ok && notify("Link copied", "success"),
-                      );
-                  }
-                }}
-              />
-            ))}
-          </tbody>
-        </table>
-      )}
+            </footer>
+          </>
+        )}
+      </SheetOnBoard>
 
+      {canCreate && (
+        <button className="sketch-btn sketch-btn--primary fab" onClick={() => setDialog({ type: "newRoom" })}>
+          <PlusIcon />
+          New drawing
+        </button>
+      )}
       {canCreate && (
         <input
           ref={fileInput}
@@ -358,7 +451,12 @@ export function FolderPage() {
       )}
       {dragging && (
         <div className="drop-hint" data-testid="drop-hint">
-          <p>Drop Excalidraw files to upload them to “{folderLabel(tree.folder)}”</p>
+          <div className="drop-hint__note">
+            <span className="drop-hint__big" aria-hidden>
+              drop it here!
+            </span>
+            <p>Drop Excalidraw files to upload them to “{folderLabel(tree.folder)}”</p>
+          </div>
         </div>
       )}
 
@@ -464,7 +562,13 @@ export function FolderPage() {
 
 function UploadButton({ uploading, onClick }: { uploading: boolean; onClick: () => void }) {
   return (
-    <button className="btn" disabled={uploading} title="Upload .excalidraw files, or PNG/SVG exports with the scene embedded" onClick={onClick}>
+    <button
+      className="sketch-btn"
+      disabled={uploading}
+      title="Upload .excalidraw files, or PNG/SVG exports with the scene embedded"
+      onClick={onClick}
+    >
+      <UploadIcon />
       {uploading ? "Uploading…" : "Upload"}
     </button>
   );
@@ -493,52 +597,99 @@ function uploadErrorMessage(fileName: string, err: unknown): string {
 }
 
 type RowAction = "rename" | "delete" | "move" | "share" | "copy";
+type MenuAction = { action: RowAction; label: string; danger?: boolean };
+
+const ACTION_ICONS: Record<RowAction, () => JSX.Element> = {
+  copy: LinkIcon,
+  rename: RenameIcon,
+  move: MoveIcon,
+  share: ShareIcon,
+  delete: DeleteIcon,
+};
+
+/** Rows after this many enter together, so a long list doesn't keep trickling in. */
+const MAX_STAGGER = 12;
 
 function NodeRow({
   row,
+  index,
   inFolder,
+  showAccess,
   onAccess,
   onAction,
 }: {
   row: Row;
+  index: number;
   /** listed inside its folder (not search results), so inherited access is the folder's */
   inFolder: boolean;
+  /** the listing has a "who has access" column */
+  showAccess: boolean;
   onAccess: () => void;
   onAction: (a: RowAction) => void;
 }) {
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   const role: Role | null = row.node.role;
   const href = row.kind === "folder" ? SPA_ROUTES.folder(row.node.id) : SPA_ROUTES.room(row.node.id);
-  const actions: Array<{ action: RowAction; label: string; danger?: boolean }> = [
+  const actions: MenuAction[] = [
     ...(row.kind === "room" ? [{ action: "copy" as const, label: "Copy link" }] : []),
     ...(roleAtLeast(role, REQUIRED_ROLE.renameNode) ? [{ action: "rename" as const, label: "Rename" }] : []),
     ...(roleAtLeast(role, REQUIRED_ROLE.moveNode) ? [{ action: "move" as const, label: "Move…" }] : []),
     ...(roleAtLeast(role, REQUIRED_ROLE.writeGrants) ? [{ action: "share" as const, label: "Share…" }] : []),
     ...(roleAtLeast(role, REQUIRED_ROLE.deleteNode) ? [{ action: "delete" as const, label: "Delete", danger: true }] : []),
   ];
+  // The whole row opens the item; the name stays the real link for keyboards and new tabs.
+  const openRow = (e: MouseEvent<HTMLTableRowElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if ((e.target as Element).closest("a, button, input, .menu")) return;
+    if (!(window.getSelection()?.isCollapsed ?? true)) return;
+    navigate(href);
+  };
   return (
-    <tr data-testid={`node-${row.kind}`}>
-      <td>
-        <Link to={href} className="node-link">
-          {row.kind === "folder" ? <FolderIcon /> : <RoomIcon />}
-          <span>{row.node.name}</span>
-        </Link>
+    <tr
+      data-testid={`node-${row.kind}`}
+      className={`listing__row listing__row--${row.kind}${menuOpen ? " is-hot" : ""}`}
+      style={{ "--i": Math.min(index, MAX_STAGGER) } as CSSProperties}
+      onClick={openRow}
+    >
+      <td className="listing__name">
+        <span className="listing__swipe" aria-hidden />
+        <svg className="listing__pointer" viewBox="0 0 42 24" aria-hidden>
+          <path pathLength={1} d="M2 15c9-6 20-7 33-3" />
+          <path pathLength={1} d="M28 5l9 7-9 6" />
+        </svg>
+        <RowRule id={row.node.id} />
+        <span className="listing__name-in">
+          {row.kind === "folder" ? <FolderSketch id={row.node.id} /> : <DrawingSketch id={row.node.id} />}
+          <Link to={href}>{row.node.name}</Link>
+        </span>
       </td>
-      <td>{role ? <span className={`badge badge--${role}`}>{ROLE_LABEL[role]}</span> : <span className="muted">—</span>}</td>
-      <td title={formatDate(row.node.updatedAt)}>{formatRelative(row.node.updatedAt)}</td>
-      <td className="nodes__access">
-        {row.node.access && (
-          <button
-            className="access-button"
-            aria-label={`Who has access to ${row.node.name}`}
-            title={accessTitle(row.node.access)}
-            onClick={onAccess}
-          >
-            <AccessChips entries={row.node.access} sameAsFolder={inFolder} />
-          </button>
+      <td className="listing__role">{role ? <RoleMark role={role} /> : <span className="muted">—</span>}</td>
+      <td className="listing__updated" title={formatDate(row.node.updatedAt)}>
+        {formatRelative(row.node.updatedAt)}
+      </td>
+      {showAccess && (
+        <td className="listing__access">
+          {row.node.access ? (
+            <button
+              className="access-button"
+              aria-label={`Who has access to ${row.node.name}`}
+              title={accessTitle(row.node.access)}
+              onClick={onAccess}
+            >
+              <AccessSummary entries={row.node.access} sameAsFolder={inFolder} />
+            </button>
+          ) : (
+            <span className="listing__hidden" title="Only owners can see who has access">
+              —
+            </span>
+          )}
+        </td>
+      )}
+      <td className="listing__actions">
+        {actions.length > 0 && (
+          <RowMenu label={row.node.name} actions={actions} open={menuOpen} onOpenChange={setMenuOpen} onAction={onAction} />
         )}
-      </td>
-      <td className="nodes__actions">
-        {actions.length > 0 && <RowMenu label={row.node.name} actions={actions} onAction={onAction} />}
       </td>
     </tr>
   );
@@ -547,50 +698,79 @@ function NodeRow({
 function RowMenu({
   label,
   actions,
+  open,
+  onOpenChange,
   onAction,
 }: {
   label: string;
-  actions: Array<{ action: RowAction; label: string; danger?: boolean }>;
+  actions: MenuAction[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onAction: (a: RowAction) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    const close = (e: globalThis.MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onOpenChange(false);
     };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onOpenChange(false);
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", esc);
     return () => {
       document.removeEventListener("mousedown", close);
       document.removeEventListener("keydown", esc);
     };
-  }, [open]);
+  }, [open, onOpenChange]);
   return (
     <div className="menu" ref={ref}>
-      <button className="icon-btn" aria-label={`Actions for ${label}`} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        ⋯
+      <button className="dots" aria-label={`Actions for ${label}`} aria-expanded={open} onClick={() => onOpenChange(!open)}>
+        <DotsIcon />
       </button>
       {open && (
-        <ul className="menu__list" role="menu">
-          {actions.map((a) => (
-            <li key={a.action}>
-              <button
-                role="menuitem"
-                className={a.danger ? "danger" : ""}
-                onClick={() => {
-                  setOpen(false);
-                  onAction(a.action);
-                }}
-              >
-                {a.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <MenuPaper>
+          <ul className="pop__list" role="menu">
+            {actions.map((a) => {
+              const Icon = ACTION_ICONS[a.action];
+              return (
+                <li key={a.action} className={a.danger ? "pop__danger" : undefined}>
+                  <button
+                    role="menuitem"
+                    className={a.danger ? "danger" : ""}
+                    onClick={() => {
+                      onOpenChange(false);
+                      onAction(a.action);
+                    }}
+                  >
+                    <Icon />
+                    {a.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </MenuPaper>
       )}
     </div>
   );
 }
+
+/** A taped scrap of paper for the ⋯ menu, outlined in pencil. */
+function MenuPaper({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const size = useElementSize(ref);
+  return (
+    <div className="pop" ref={ref}>
+      <div className="pop__tape" aria-hidden />
+      {size && <PencilOutline size={size} className="pop__border" roughness={[0.6, 0.8]} />}
+      {children}
+    </div>
+  );
+}
+
+/** Your role, as a highlighter swipe. */
+function RoleMark({ role }: { role: Role }) {
+  return <span className={`marker marker--${role}`}>{ROLE_LABEL[role]}</span>;
+}
+
+const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;

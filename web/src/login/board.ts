@@ -9,7 +9,8 @@
  * dispose function that stops the loop, cancels every pending step and removes
  * what it added to the DOM.
  */
-import { DOODLES, HAND_FONT, Rough, Sketch, svgEl, type DoodleSpec, type DrawOp } from "./sketch";
+import { HAND_FONT, Rough } from "../sketch/rough";
+import { DOODLES, Sketch, svgEl, type DoodleSpec, type DrawOp } from "./sketch";
 
 export interface BoardParts {
   /** Doodles are drawn into this SVG; its viewBox tracks the viewport. */

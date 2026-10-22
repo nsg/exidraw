@@ -1,62 +1,17 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { paperBorder } from "./sketch";
+import { useRef, type ReactNode } from "react";
+import { PencilOutline, useElementSize } from "../sketch/Paper";
 
 /** The login card: a sheet of paper taped to the board, outlined in pencil. */
 export function PaperCard({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-
   // The outline follows the card as it grows (providers loading, errors, user lists).
-  useLayoutEffect(() => {
-    const card = ref.current;
-    if (!card) return;
-    const measure = () => {
-      const [w, h] = [card.offsetWidth, card.offsetHeight];
-      setSize((prev) => (prev?.w === w && prev.h === h ? prev : { w, h }));
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(card);
-    return () => observer.disconnect();
-  }, []);
-
-  const [outline, retrace] = size ? paperBorder(size.w, size.h) : ["", ""];
+  const size = useElementSize(ref);
   return (
     <main className="login__paper" ref={ref}>
       <div className="login__tape" aria-hidden />
-      {size && (
-        <svg className="login__border" width={size.w + 12} height={size.h + 12} viewBox={`0 0 ${size.w + 12} ${size.h + 12}`} aria-hidden>
-          <path pathLength={1} d={outline} />
-          <path pathLength={1} d={retrace} />
-        </svg>
-      )}
+      {size && <PencilOutline size={size} className="login__border" />}
       {children}
     </main>
-  );
-}
-
-/** Handwritten "start here!" with an arrow pointing at the right edge of its parent's first control. */
-export function StartHint({ label }: { label: string }) {
-  return (
-    <div className="login__hint" aria-hidden>
-      <span>{label}</span>
-      <svg viewBox="0 0 190 96">
-        <path pathLength={1} d="M74 38c14 22 46 42 104 40" />
-        <path pathLength={1} d="M165 67l13 11-14 9" />
-      </svg>
-    </div>
-  );
-}
-
-/** Text with a hand-drawn squiggle underneath. */
-export function Scribble({ children }: { children: ReactNode }) {
-  return (
-    <span className="login__scribble">
-      {children}
-      <svg viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden>
-        <path pathLength={1} d="M2 8c14-5 30-6 48-3s34 4 48-2" />
-      </svg>
-    </span>
   );
 }
 

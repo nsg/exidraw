@@ -26,7 +26,7 @@ export function principalLabel(p: Principal): string {
   return p.displayName ? `${p.displayName} (${p.email})` : p.email;
 }
 
-/** Compact form for chips: "Everyone", or the person's name, else their e-mail. */
+/** Compact form for listings: "Everyone", or the person's name, else their e-mail. */
 export function principalShortName(p: Principal): string {
   return p.kind === "all" ? "Everyone" : (p.displayName ?? p.email);
 }

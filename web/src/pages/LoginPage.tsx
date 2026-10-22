@@ -5,16 +5,15 @@ import { api, errorMessage } from "../api";
 import { useSession } from "../session";
 import { Brand, initials } from "../components/Layout";
 import { LoginBoard } from "../login/LoginBoard";
-import { ArrowIcon, LockIcon, MicrosoftLogo, PaperCard, Scribble, StartHint } from "../login/Paper";
+import { ArrowIcon, LockIcon, MicrosoftLogo, PaperCard } from "../login/Paper";
+import { Scribble, StartHint } from "../sketch/Paper";
+import { MARKER_COLORS } from "../sketch/rough";
 import { safeReturnTo } from "../util";
 
 const ERROR_TEXT: Record<string, string> = {
   state: "The sign-in attempt expired. Please try again.",
   denied: "Sign-in was cancelled.",
 };
-
-/** Marker colours for the dev users' initials, as on the board's cursors. */
-const AVATAR_COLORS = ["#f76707", "#1c7ed6", "#d6336c", "#2f9e44", "#6965db", "#f59f00"];
 
 export function LoginPage() {
   const location = useLocation();
@@ -89,7 +88,7 @@ export function LoginPage() {
                 <li key={u.id} className="login__cta">
                   {i === 0 && <StartHint label="pick one!" />}
                   <button type="button" className="login__user" disabled={busy !== null} onClick={() => void devLogin(u.id)}>
-                    <span className="login__avatar" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }} aria-hidden>
+                    <span className="login__avatar" style={{ background: MARKER_COLORS[i % MARKER_COLORS.length] }} aria-hidden>
                       {initials(u.name)}
                     </span>
                     <span className="login__who">

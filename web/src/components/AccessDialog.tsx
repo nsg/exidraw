@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type CSSProperties } from "react";
 import { REQUIRED_ROLE, ROLES, ROLE_RANK, accessFromGrants, roleAtLeast, type AccessEntry, type Role } from "@exidraw/shared";
 import { api, errorMessage } from "../api";
 import { Modal } from "./Modal";
 import type { ShareTarget } from "./ShareDialog";
 import { useMe } from "../session";
+import { FACE_COLORS, pick } from "../sketch/rough";
+import { initials } from "./Layout";
 import { ROLE_LABEL, folderLabel, principalLabel, principalShortName } from "../util";
 
 /** What each role can do, keyed by operation so the legend follows the server's checks. */
@@ -185,11 +187,12 @@ export function accessTitle(entries: readonly AccessEntry[]): string {
 }
 
 /**
- * Compact chips for a listing: everyone first (never truncated away, it raises
- * everybody else), then grants set on the node, then inherited ones muted. With `sameAsFolder`, a node that adds nothing to its folder says so
- * instead of repeating the folder's access.
+ * Who has access, for a listing: initials and names. Everyone comes first (never
+ * truncated away, it raises everybody else), then grants set on the node, then
+ * inherited ones muted. With `sameAsFolder`, a node that adds nothing to its
+ * folder says so instead of repeating the folder's access.
  */
-export function AccessChips({
+export function AccessSummary({
   entries,
   sameAsFolder = false,
   max = 3,
@@ -200,23 +203,52 @@ export function AccessChips({
 }) {
   const rank = (e: AccessEntry) => (e.principal.kind === "all" ? 0 : e.from ? 2 : 1);
   const ordered = [...entries].sort((a, b) => rank(a) - rank(b));
-  if (ordered.length === 0) return <span className="muted">Not shared</span>;
-  if (sameAsFolder && ordered.every((e) => e.from)) return <span className="muted">Same as folder</span>;
+  if (ordered.length === 0 || (sameAsFolder && ordered.every((e) => e.from))) {
+    return (
+      <span className="who who--none">
+        <span className="who__empty" aria-hidden />
+        <span className="who__label">{ordered.length === 0 ? "Not shared" : "Same as folder"}</span>
+      </span>
+    );
+  }
   const shown = ordered.slice(0, max);
+  const key = (e: AccessEntry) => (e.principal.kind === "all" ? "all" : e.principal.email);
   return (
-    <span className="chips">
-      {shown.map((e) => (
-        <span
-          key={e.principal.kind === "all" ? "all" : e.principal.email}
-          className={`chip${e.from ? " chip--inherited" : ""}`}
-          title={entryTitle(e, entries)}
-        >
-          <PrincipalIcon entry={e} />
-          <span className="chip__name">{principalShortName(e.principal)}</span>{" "}
-          <span className="chip__role">· {ROLE_LABEL[e.role]}</span>
-        </span>
-      ))}
-      {ordered.length > shown.length && <span className="muted chips__more">+{ordered.length - shown.length} more</span>}
+    <span className="who">
+      <span className="who__faces" aria-hidden>
+        {shown.map((e) => (
+          <PrincipalFace key={key(e)} entry={e} />
+        ))}
+      </span>
+      <span className="who__names">
+        {shown.map((e, i) => (
+          <Fragment key={key(e)}>
+            {i > 0 && ", "}
+            <span className={e.from ? "who__inherited" : undefined} title={entryTitle(e, entries)}>
+              <b>{principalShortName(e.principal)}</b> <span className="who__role">· {ROLE_LABEL[e.role]}</span>
+            </span>
+          </Fragment>
+        ))}
+        {ordered.length > shown.length && <span className="who__more"> +{ordered.length - shown.length} more</span>}
+      </span>
+    </span>
+  );
+}
+
+/** Initials in a marker colour of their own, or a globe for everyone. */
+function PrincipalFace({ entry }: { entry: AccessEntry }) {
+  const p = entry.principal;
+  const className = `face${p.kind === "all" ? " face--everyone" : ""}${entry.from ? " face--inherited" : ""}`;
+  if (p.kind === "all") {
+    return (
+      <span className={className}>
+        <EveryoneIcon />
+      </span>
+    );
+  }
+  return (
+    <span className={className} style={{ "--marker": pick(FACE_COLORS, p.email) } as CSSProperties}>
+      {initials(p.displayName ?? p.email.split("@")[0]!.replace(/[._-]+/g, " "))}
     </span>
   );
 }

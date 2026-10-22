@@ -1,6 +1,11 @@
-import { NavLink, Outlet, useNavigate } from "react-router";
+import type { CSSProperties } from "react";
+import { NavLink, Outlet, useMatch, useNavigate } from "react-router";
 import { SPA_ROUTES } from "@exidraw/shared";
 import { useMe, useSession } from "../session";
+import { FACE_COLORS, Rough, pick } from "../sketch/rough";
+
+/** The pencil line under the top bar, stretched to its width. */
+const TOPBAR_LINE = new Rough(5).line(0, 3, 1000, 3.4, 0.5);
 
 export function Brand() {
   return (
@@ -18,10 +23,10 @@ export function UserMenu() {
   return (
     <div className="user-menu">
       <span className="user-chip" title={me.user.email} data-testid="current-user">
-        <span className="avatar" aria-hidden>
+        <span className="avatar" style={{ "--marker": pick(FACE_COLORS, me.user.email) } as CSSProperties} aria-hidden>
           {initials(me.user.name)}
         </span>
-        {me.user.name}
+        <span className="user-chip__name">{me.user.name}</span>
         {me.isAdmin && <span className="badge">admin</span>}
       </span>
       <button
@@ -43,6 +48,8 @@ export function initials(name: string): string {
 }
 
 export function Layout() {
+  // Every folder is part of "Drawings", not only the root.
+  const inFolder = useMatch(SPA_ROUTES.folder(":folderId")) !== null;
   return (
     <div className="app">
       <header className="topbar">
@@ -50,7 +57,7 @@ export function Layout() {
           <Brand />
         </NavLink>
         <nav className="topbar__nav">
-          <NavLink to={SPA_ROUTES.root} end className={({ isActive }) => (isActive ? "active" : "")}>
+          <NavLink to={SPA_ROUTES.root} end className={({ isActive }) => (isActive || inFolder ? "active" : "")}>
             Drawings
           </NavLink>
           <NavLink to={SPA_ROUTES.tokens} className={({ isActive }) => (isActive ? "active" : "")}>
@@ -58,6 +65,9 @@ export function Layout() {
           </NavLink>
         </nav>
         <UserMenu />
+        <svg className="topbar__line" viewBox="0 0 1000 6" preserveAspectRatio="none" aria-hidden>
+          <path d={TOPBAR_LINE} />
+        </svg>
       </header>
       <main className="content">
         <Outlet />
