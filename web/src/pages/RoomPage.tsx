@@ -17,6 +17,9 @@ import { ShareDialog } from "../components/ShareDialog";
 import { useToast } from "../components/Toasts";
 import { Brand, UserMenu } from "../components/Layout";
 import { HistoryDrawer } from "../room/HistoryDrawer";
+import { InsertDialog } from "../room/InsertDialog";
+import { insertIntoScene, interceptDrawingDrops } from "../room/insertScene";
+import { ImportError, skippedNote, type DrawingData } from "../importing";
 import { NotFoundPage } from "./NotFoundPage";
 import { useSession } from "../session";
 import { absoluteUrl, copyText } from "../util";
@@ -110,7 +113,9 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
   const [fatal, setFatal] = useState<FatalReason | null>(null);
   const [excalidraw, setExcalidraw] = useState<ExcalidrawImperativeAPI | null>(null);
   const [panel, setPanel] = useState<"share" | "history" | null>(null);
+  const [inserting, setInserting] = useState(false);
   const clientRef = useRef<CollabClient | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef(status);
   statusRef.current = status;
   const roleRef = useRef(role);
@@ -156,6 +161,39 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
       delete window.__exidraw;
     };
   }, [excalidraw, initialRoom.id, initialRoom.role, refresh, notify]);
+
+  /** Throws `ImportError` (element limit); callers show the message. */
+  const insertDrawing = useCallback(
+    (data: DrawingData, name: string, at?: { x: number; y: number }) => {
+      if (!excalidraw) return;
+      // The role may have changed while the drawing was loading.
+      if (!roleAtLeast(roleRef.current, REQUIRED_ROLE.writeScene)) {
+        throw new ImportError("invalid", "You can no longer edit this drawing.");
+      }
+      insertIntoScene(excalidraw, data, at);
+      // onChange broadcasts too; flushing here does not depend on it.
+      clientRef.current?.onLocalChange();
+      const note = skippedNote(data);
+      notify(`Inserted “${name}”${note ? ` (${note})` : ""}`, "success");
+    },
+    [excalidraw, notify],
+  );
+
+  useEffect(() => {
+    if (!excalidraw || !canvasRef.current) return;
+    return interceptDrawingDrops(excalidraw, canvasRef.current, {
+      canEdit: () => roleAtLeast(roleRef.current, REQUIRED_ROLE.writeScene),
+      onDrawing: (data, name, at) => {
+        try {
+          insertDrawing(data, name, at);
+        } catch (err) {
+          notify(errorMessage(err), "error");
+        }
+      },
+      onLibrary: (fileName) => notify(`Added “${fileName}” to your library`, "success"),
+      onError: (m) => notify(m, "error"),
+    });
+  }, [excalidraw, insertDrawing, notify]);
 
   useEffect(() => blockExternalImagePaste(() => notify("Images from web pages cannot be pasted; save the image and drop it in.", "error")), [notify]);
 
@@ -243,7 +281,7 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
         )}
         <UserMenu />
       </header>
-      <div className="room__canvas">
+      <div className="room__canvas" ref={canvasRef}>
         <Excalidraw
           excalidrawAPI={setExcalidraw}
           initialData={initialData}
@@ -263,6 +301,7 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
             <MainMenu.Item onSelect={() => navigate(folderHref)}>Back to folder</MainMenu.Item>
             <MainMenu.Item onSelect={() => void copyLink()}>Copy link</MainMenu.Item>
             <MainMenu.Item onSelect={() => setPanel("history")}>Version history</MainMenu.Item>
+            {canEdit && <MainMenu.Item onSelect={() => setInserting(true)}>Insert drawing…</MainMenu.Item>}
             <MainMenu.Separator />
             <MainMenu.DefaultItems.SaveAsImage />
             <MainMenu.DefaultItems.Export />
@@ -278,6 +317,9 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
           <HistoryDrawer roomId={room.id} canRestore={canEdit} excalidraw={excalidraw} onClose={() => setPanel(null)} />
         )}
       </div>
+      {inserting && canEdit && (
+        <InsertDialog room={room} onInsert={insertDrawing} onClose={() => setInserting(false)} />
+      )}
       {panel === "share" && (
         <ShareDialog
           target={{ kind: "room", id: room.id, name: room.name, linkPath: SPA_ROUTES.room(room.id) }}

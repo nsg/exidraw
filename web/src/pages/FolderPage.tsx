@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import {
+  MAX_ELEMENTS_PER_ROOM,
   REQUIRED_ROLE,
   ROOT_FOLDER_ID,
   SPA_ROUTES,
@@ -16,6 +17,14 @@ import { ConfirmDialog, PromptDialog } from "../components/Modal";
 import { ShareDialog, type ShareTarget } from "../components/ShareDialog";
 import { FolderIcon, MoveDialog, RoomIcon, type MoveTarget } from "../components/MoveDialog";
 import { useToast } from "../components/Toasts";
+import {
+  DRAWING_FILE_ACCEPT,
+  ImportError,
+  drawingNameFromFile,
+  parseDrawingFile,
+  skippedNote,
+  uploadElements,
+} from "../importing";
 import { NotFoundPage } from "./NotFoundPage";
 import { ROLE_LABEL, absoluteUrl, copyText, folderLabel, formatDate, formatRelative } from "../util";
 
@@ -33,6 +42,16 @@ type DialogState =
 export function FolderPage() {
   const { folderId = ROOT_FOLDER_ID } = useParams();
   const navigate = useNavigate();
+  // Where the user is now; an upload that finishes after they moved on must not pull them back.
+  const location = useLocation();
+  const here = useRef(location.key);
+  here.current = location.key;
+  useEffect(
+    () => () => {
+      here.current = "";
+    },
+    [],
+  );
   const notify = useToast();
   const [tree, setTree] = useState<TreeResponse | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -40,6 +59,10 @@ export function FolderPage() {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResponse | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const uploadingRef = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   // Latest folder requested; a slower response for a folder we left is dropped.
   const wantedFolder = useRef(folderId);
@@ -81,12 +104,83 @@ export function FolderPage() {
     return () => window.clearTimeout(timer);
   }, [query, notify]);
 
+  const role = tree?.folder.role ?? null;
+  const canCreate = roleAtLeast(role, REQUIRED_ROLE.createChild);
+
+  /** One new drawing per file; a single file opens it, several stay here with a summary. */
+  const upload = async (files: File[]) => {
+    if (!tree || files.length === 0 || uploadingRef.current) return;
+    uploadingRef.current = true;
+    setUploading(true);
+    const startedAt = here.current;
+    const created: RoomInfo[] = [];
+    try {
+      for (const file of files) {
+        try {
+          const { room, skippedWebPages } = await uploadDrawing(tree.folder.id, file);
+          created.push(room);
+          const note = skippedNote({ skippedWebPages });
+          if (note) notify(`“${file.name}”: ${note}`);
+        } catch (err) {
+          notify(uploadErrorMessage(file.name, err), "error");
+        }
+      }
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
+    const moved = here.current !== startedAt;
+    if (files.length === 1 && created.length === 1) {
+      if (moved) notify(`Uploaded “${created[0]!.name}”`, "success");
+      else navigate(SPA_ROUTES.room(created[0]!.id));
+    } else if (created.length > 0) {
+      notify(`Uploaded ${created.length} drawing${created.length === 1 ? "" : "s"}`, "success");
+      if (!moved) await load();
+    }
+  };
+  const uploadRef = useRef(upload);
+  uploadRef.current = upload;
+
+  // Files dragged anywhere over the page upload into this folder.
+  const acceptDrops = canCreate && dialog === null;
+  useEffect(() => {
+    if (!acceptDrops) return;
+    let depth = 0;
+    const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes("Files");
+    const enter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth++;
+      setDragging(true);
+    };
+    const leave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setDragging(false);
+    };
+    const over = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      e.dataTransfer!.dropEffect = "copy";
+    };
+    const drop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0;
+      setDragging(false);
+      void uploadRef.current([...e.dataTransfer!.files]);
+    };
+    const listeners = { dragenter: enter, dragleave: leave, dragover: over, drop } as const;
+    for (const [type, fn] of Object.entries(listeners)) window.addEventListener(type, fn as EventListener);
+    return () => {
+      for (const [type, fn] of Object.entries(listeners)) window.removeEventListener(type, fn as EventListener);
+      setDragging(false);
+    };
+  }, [acceptDrops]);
+
   if (notFound) return <NotFoundPage message="This folder does not exist, or you do not have access to it." />;
   if (error) return <div className="alert alert--error">{error}</div>;
   if (!tree) return <p className="muted">Loading…</p>;
 
-  const role = tree.folder.role;
-  const canCreate = roleAtLeast(role, REQUIRED_ROLE.createChild);
   const canShare = roleAtLeast(role, REQUIRED_ROLE.writeGrants);
 
   const rows: Row[] = results
@@ -138,6 +232,7 @@ export function FolderPage() {
               <button className="btn" onClick={() => setDialog({ type: "newFolder" })}>
                 New folder
               </button>
+              <UploadButton uploading={uploading} onClick={() => fileInput.current?.click()} />
               <button className="btn btn--primary" onClick={() => setDialog({ type: "newRoom" })}>
                 New drawing
               </button>
@@ -160,9 +255,15 @@ export function FolderPage() {
             <>
               <p>This folder is empty.</p>
               {canCreate && (
-                <button className="btn btn--primary" onClick={() => setDialog({ type: "newRoom" })}>
-                  Create a drawing
-                </button>
+                <>
+                  <div className="empty__actions">
+                    <button className="btn btn--primary" onClick={() => setDialog({ type: "newRoom" })}>
+                      Create a drawing
+                    </button>
+                    <UploadButton uploading={uploading} onClick={() => fileInput.current?.click()} />
+                  </div>
+                  <p className="hint">You can also drop .excalidraw files here.</p>
+                </>
               )}
             </>
           )}
@@ -212,6 +313,27 @@ export function FolderPage() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {canCreate && (
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          accept={DRAWING_FILE_ACCEPT}
+          aria-label="Upload drawings"
+          hidden
+          onChange={(e) => {
+            const files = [...(e.currentTarget.files ?? [])];
+            e.currentTarget.value = "";
+            void upload(files);
+          }}
+        />
+      )}
+      {dragging && (
+        <div className="drop-hint" data-testid="drop-hint">
+          <p>Drop Excalidraw files to upload them to “{folderLabel(tree.folder)}”</p>
+        </div>
       )}
 
       {dialog?.type === "newFolder" && (
@@ -295,6 +417,36 @@ export function FolderPage() {
       {dialog?.type === "share" && <ShareDialog target={dialog.target} onClose={closeDialog} />}
     </div>
   );
+}
+
+function UploadButton({ uploading, onClick }: { uploading: boolean; onClick: () => void }) {
+  return (
+    <button className="btn" disabled={uploading} title="Upload .excalidraw files, or PNG/SVG exports with the scene embedded" onClick={onClick}>
+      {uploading ? "Uploading…" : "Upload"}
+    </button>
+  );
+}
+
+async function uploadDrawing(folderId: string, file: File): Promise<{ room: RoomInfo; skippedWebPages: number }> {
+  const { elements, files, skippedWebPages } = await parseDrawingFile(file);
+  if (elements.length > MAX_ELEMENTS_PER_ROOM) {
+    throw new ImportError("invalid", `“${file.name}” has more than ${MAX_ELEMENTS_PER_ROOM.toLocaleString()} elements.`);
+  }
+  const room = await api.importRoom({
+    folderId,
+    name: drawingNameFromFile(file.name),
+    elements: uploadElements(elements, file.name),
+    files: Object.fromEntries(Object.values(files).map((f) => [f.id, { mimeType: f.mimeType, dataURL: f.dataURL }])),
+  });
+  return { room, skippedWebPages };
+}
+
+function uploadErrorMessage(fileName: string, err: unknown): string {
+  if (err instanceof ImportError) return err.message;
+  if (err instanceof ApiRequestError && err.status === 413) {
+    return `“${fileName}” is too large: an image in it is over the size limit, or the file exceeds the upload limit.`;
+  }
+  return `Could not upload “${fileName}”: ${errorMessage(err)}`;
 }
 
 type RowAction = "rename" | "delete" | "move" | "share" | "copy";

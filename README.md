@@ -38,6 +38,9 @@ edits show up live, and they can render a drawing to look at it.
   before agent edits), the newest 100 kept per room, restorable from the UI.
 - **Images.** Images pasted into drawings are stored on the volume and synced
   to collaborators.
+- **Upload and insert.** Upload `.excalidraw` files (or PNG/SVG exports with
+  an embedded scene) as new drawings, by button or drag and drop. Insert a
+  file or another drawing into the open one as a grouped, undoable copy.
 - **Agents over MCP.** 13 tools to browse, search, create, read, draw, edit and
   render drawings, plus Mermaid-to-diagram conversion. Agents authenticate with
   personal access tokens and act with their owner's permissions.
@@ -248,12 +251,13 @@ rooms and the SQLite database belong to one process.
   be `https` so the session cookie is `Secure`.
 - Allow WebSocket upgrades on `/ws`, and keep idle connections open well past
   the 30-second ping interval.
-- Allow request bodies of at least 5 MB for image uploads.
+- Allow request bodies of at least 16 MB: drawing uploads carry their images
+  and may use the full JSON body limit; single image uploads need 5 MB.
 
 For ingress-nginx:
 
 ```yaml
-nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+nginx.ingress.kubernetes.io/proxy-body-size: "17m"
 nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
 nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 ```

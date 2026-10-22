@@ -18,6 +18,7 @@ import {
   type FileInfo,
   type FolderInfo,
   type GrantsResponse,
+  type ImportRoomBody,
   type MeResponse,
   type NodeKind,
   type PutGrantsBody,
@@ -134,6 +135,9 @@ export const api = {
   updateRoom: (id: string, body: UpdateRoomBody) =>
     json<RoomInfo>(`${A}/rooms/${enc(id)}`, { method: "PATCH", json: body }),
   deleteRoom: (id: string) => request(`${A}/rooms/${enc(id)}`, { method: "DELETE" }).then(() => undefined),
+  importRoom: (body: ImportRoomBody) => json<RoomInfo>(`${A}/rooms/import`, { method: "POST", json: body }),
+  /** Excalidraw file JSON (`type: "excalidraw"`, live elements, files as data URLs). */
+  exportJson: (id: string) => json<unknown>(`${A}/rooms/${enc(id)}/export.json`),
 
   // grants
   grants: (kind: NodeKind, id: string) => json<GrantsResponse>(`${A}/nodes/${kind}/${enc(id)}/grants`),

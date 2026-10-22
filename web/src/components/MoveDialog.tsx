@@ -62,20 +62,7 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget; o
       {error && <div className="alert alert--error">{error}</div>}
       {tree && (
         <div className="picker">
-          <div className="breadcrumbs">
-            {[...tree.breadcrumbs, tree.folder].map((b, i, all) => (
-              <span key={b.id}>
-                {i < all.length - 1 ? (
-                  <button type="button" className="link" onClick={() => setFolderId(b.id)}>
-                    {folderLabel(b)}
-                  </button>
-                ) : (
-                  <strong>{folderLabel(b)}</strong>
-                )}
-                {i < all.length - 1 && <span className="sep">/</span>}
-              </span>
-            ))}
-          </div>
+          <PickerBreadcrumbs tree={tree} onOpen={setFolderId} />
           <ul className="picker__list">
             {tree.folders
               .filter((f) => !(target.kind === "folder" && f.id === target.id))
@@ -97,6 +84,26 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget; o
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Path of the folder being browsed in a picker; ancestors are clickable. */
+export function PickerBreadcrumbs({ tree, onOpen }: { tree: TreeResponse; onOpen: (folderId: string) => void }) {
+  return (
+    <div className="breadcrumbs">
+      {[...tree.breadcrumbs, tree.folder].map((b, i, all) => (
+        <span key={b.id}>
+          {i < all.length - 1 ? (
+            <button type="button" className="link" onClick={() => onOpen(b.id)}>
+              {folderLabel(b)}
+            </button>
+          ) : (
+            <strong>{folderLabel(b)}</strong>
+          )}
+          {i < all.length - 1 && <span className="sep">/</span>}
+        </span>
+      ))}
+    </div>
   );
 }
 

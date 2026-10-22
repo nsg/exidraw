@@ -858,3 +858,63 @@ select:focus,
 .agent-help p {
   margin: 0 0 0.75rem;
 }
+
+/* ---- import ------------------------------------------------------------------------ */
+.empty__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.drop-hint {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(105 101 219 / 0.12);
+  border: 3px dashed var(--primary);
+  z-index: 900;
+  pointer-events: none;
+}
+.drop-hint p {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}
+.insert {
+  display: grid;
+  gap: 1rem;
+}
+.insert__file {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+}
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.tabs__tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  font: inherit;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+.tabs__tab[aria-selected="true"] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.picker__item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.picker .search {
+  width: 100%;
+}
