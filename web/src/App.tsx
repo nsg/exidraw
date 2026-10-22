@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import { SPA_ROUTES } from "@exidraw/shared";
 import { SessionProvider, useSession } from "./session";
@@ -5,10 +6,12 @@ import { ToastProvider } from "./components/Toasts";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { FolderPage } from "./pages/FolderPage";
-import { RoomPage } from "./pages/RoomPage";
 import { TokensPage } from "./pages/TokensPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { safeReturnTo } from "./util";
+
+// The editor (and the Excalidraw bundle) loads only when a drawing is opened.
+const RoomPage = lazy(() => import("./pages/RoomPage").then((m) => ({ default: m.RoomPage })));
 
 export function App() {
   return (
@@ -49,7 +52,14 @@ function AppRoutes() {
         path={SPA_ROUTES.login}
         element={<Navigate to={safeReturnTo(new URLSearchParams(location.search).get("returnTo"))} replace />}
       />
-      <Route path="/r/:roomId" element={<RoomPage />} />
+      <Route
+        path="/r/:roomId"
+        element={
+          <Suspense fallback={<div className="splash">Loading…</div>}>
+            <RoomPage />
+          </Suspense>
+        }
+      />
       <Route element={<Layout />}>
         <Route index element={<FolderPage />} />
         <Route path="/f/:folderId" element={<FolderPage />} />
