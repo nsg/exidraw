@@ -11,6 +11,9 @@
   --danger-soft: #ffe3e3;
   --warn-soft: #fff4d6;
   --success: #2f9e44;
+  --paper: #fffdf8;
+  /* Excalidraw's Virgil, registered under our own name in the login section */
+  --hand: "Exidraw Virgil", "Comic Sans MS", cursive;
   --radius: 8px;
   --shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 6px 24px rgb(0 0 0 / 0.08);
   font-family: Assistant, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -303,41 +306,606 @@ select:focus,
 }
 
 /* ---- login ------------------------------------------------------------------------ */
+/* Excalidraw's handwriting font, served by us (scripts/copy-excalidraw-assets.mjs).
+   Own family name, so it can't collide with the faces Excalidraw registers itself. */
+@font-face {
+  font-family: "Exidraw Virgil";
+  src: url("/excalidraw-assets/fonts/Virgil/Virgil-Regular.woff2") format("woff2");
+  font-display: swap;
+}
 .login {
+  position: relative;
   min-height: 100%;
+  isolation: isolate;
+  /* The tilted card and its outline poke out a few px on phones; no sideways scroll for that. */
+  overflow-x: clip;
+}
+
+/* The board: fixed layers behind the card, moved by the parallax in login/board.ts. */
+.login__layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.login__grid {
+  inset: -60px;
+  background-image: radial-gradient(circle at 1px 1px, rgb(27 27 31 / 0.17) 1.05px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+.login__glow {
+  background:
+    radial-gradient(520px 420px at 50% 52%, rgb(224 223 255 / 0.85), rgb(224 223 255 / 0) 70%),
+    radial-gradient(1200px 800px at 50% 50%, rgb(247 247 249 / 0) 55%, rgb(105 101 219 / 0.07) 100%);
+}
+.login__doodles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.login__cursors {
+  position: absolute;
+  inset: 0;
+}
+.login__cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  transform: translate(-100px, -100px);
+}
+.login__cursor svg {
+  display: block;
+  width: 22px;
+  height: 24px;
+  margin: -2px 0 0 -2px;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.28));
+}
+.login__cursor-tag {
+  position: absolute;
+  left: 15px;
+  top: 20px;
+  padding: 3px 9px 4px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px -2px rgb(0 0 0 / 0.3);
+}
+
+/* Faint editor chrome: toolbar and zoom control, purely decorative. */
+.login__island {
+  position: fixed;
+  /* Above the board, below the card's stage: it must never cover a control. */
+  z-index: 1;
+  pointer-events: none;
+  background: rgb(255 255 255 / 0.92);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgb(27 27 31 / 0.05),
+    0 1px 2px rgb(27 27 31 / 0.06),
+    0 6px 20px -6px rgb(27 27 31 / 0.14);
+  backdrop-filter: blur(6px);
+}
+.login__toolbar {
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+}
+.login__toolbar i {
+  position: relative;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  border-radius: 8px;
+  color: #3d3d45;
+  font-style: normal;
 }
-.login__card {
-  width: min(400px, 100%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 2rem;
+.login__toolbar svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.login__toolbar small {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 8.5px;
+  font-weight: 600;
+  color: #a3a3ad;
+}
+.login__toolbar .login__tool--on {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.login__toolbar .login__tool--on small {
+  color: #8f8ce6;
+}
+.login__toolbar-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #e6e6ec;
+}
+.login__zoom {
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3d3d45;
+}
+.login__zoom span {
+  height: 36px;
+  padding: 0 10px;
   display: grid;
-  gap: 0.75rem;
+  place-items: center;
 }
-.login__card .brand {
-  font-size: 1.5rem;
+.login__zoom span:not(:nth-child(2)) {
+  width: 36px;
+  padding: 0;
+  font-size: 17px;
+  color: #55555e;
 }
-.login__card p {
-  margin: 0;
+
+/* The card. The stage scrolls with the page when the card is taller than the viewport. */
+.login__stage {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  /* Clear of the faux toolbar when the card is taller than the viewport. */
+  padding: 84px 20px;
+  will-change: transform;
 }
+.login__paper {
+  --tilt: -1.6deg;
+  position: relative;
+  width: min(404px, 100%);
+  padding: 46px 40px 26px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0) 40%),
+    var(--paper);
+  border-radius: 4px 3px 5px 3px;
+  transform: rotate(var(--tilt));
+  box-shadow:
+    0 1px 1px rgb(27 27 31 / 0.05),
+    0 2px 4px -1px rgb(27 27 31 / 0.06),
+    0 18px 30px -14px rgb(27 27 31 / 0.22),
+    0 40px 70px -28px rgb(105 101 219 / 0.45);
+  animation: login-drop 0.9s cubic-bezier(0.2, 1.25, 0.35, 1) both;
+}
+@keyframes login-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-34px) rotate(calc(var(--tilt) - 4.4deg)) scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--tilt));
+  }
+}
+.login__border {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  overflow: visible;
+  pointer-events: none;
+}
+.login__border path {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: login-ink 1.1s 0.35s ease-in-out forwards;
+}
+.login__border path + path {
+  stroke-width: 1.1;
+  opacity: 0.45;
+  animation-delay: 0.9s;
+}
+@keyframes login-ink {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.login__tape {
+  position: absolute;
+  top: -17px;
+  left: 50%;
+  width: 132px;
+  height: 32px;
+  margin-left: -66px;
+  transform: rotate(-3.5deg);
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgb(27 27 31 / 0.12));
+  animation: login-slap 0.5s 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.login__tape::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.05) 60%),
+    rgb(196 193 255 / 0.62);
+  clip-path: polygon(2% 0, 98% 0, 100% 14%, 97% 30%, 100% 47%, 97.5% 63%, 100% 80%, 98% 100%, 2% 100%, 0 84%, 2.5% 66%, 0 50%, 2.5% 34%, 0 17%);
+}
+@keyframes login-slap {
+  from {
+    opacity: 0;
+    transform: rotate(-12deg) scale(1.35);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-3.5deg);
+  }
+}
+
+.login__brand .brand {
+  gap: 12px;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+.login__brand .brand img {
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 4px 8px rgb(105 101 219 / 0.35));
+}
+.login__tagline {
+  margin: 22px 0 0;
+  font: 400 25px/1.35 var(--hand);
+}
+.login__scribble {
+  position: relative;
+  white-space: nowrap;
+  color: var(--primary);
+}
+.login__scribble svg {
+  position: absolute;
+  left: -4px;
+  bottom: -9px;
+  width: calc(100% + 10px);
+  height: 14px;
+  overflow: visible;
+  pointer-events: none;
+}
+.login__scribble path {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: login-ink 0.7s 1.25s ease-out forwards;
+}
+.login__lead {
+  margin: 16px 0 24px;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.login__loading {
+  margin: 0 0 8px;
+  font: 400 18px var(--hand);
+  color: var(--muted);
+}
+
+/* Error: a red pencil box; dev-mode notice: a sticky note. */
+.login__alert {
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  border: 1.6px solid currentColor;
+  border-radius: 14px 5px 11px 6px / 6px 11px 5px 14px;
+  transform: rotate(0.5deg);
+}
+.alert--error.login__alert {
+  background: #fff5f5;
+  color: #c92a2a;
+}
+.login__note {
+  position: relative;
+  margin: 0 4px 22px;
+  padding: 10px 30px 12px 14px;
+  border-radius: 0;
+  font: 400 17px/1.35 var(--hand);
+  color: #5c3d00;
+  background: linear-gradient(225deg, transparent 13px, #fff3bf 13px);
+  transform: rotate(-1deg);
+  filter: drop-shadow(0 4px 5px rgb(27 27 31 / 0.12));
+}
+.login__note::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(225deg, transparent 50%, #ffe066 50%);
+}
+
+/* Call to action; also the anchor for the handwritten hint beside it. */
+.login__cta {
+  position: relative;
+}
+.login__ms {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 52px;
+  border-radius: 11px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  box-shadow:
+    0 0 0 1.75px var(--text),
+    3px 4px 0 0 var(--text);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+.login__ms:hover {
+  background: var(--primary-hover);
+  text-decoration: none;
+  transform: translate(-1px, -2px);
+  box-shadow:
+    0 0 0 1.75px var(--text),
+    5px 7px 0 0 var(--text);
+}
+.login__ms:active {
+  transform: translate(2px, 3px);
+  box-shadow:
+    0 0 0 1.75px var(--text),
+    0 0 0 0 var(--text);
+}
+.login__ms:focus-visible,
+.login__user:focus-visible {
+  outline: 3px solid #a5a2f5;
+  outline-offset: 5px;
+}
+.login__ms-logo {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #fff;
+}
+.login__ms-logo svg {
+  width: 16px;
+  height: 16px;
+}
+.login__arrow {
+  flex: none;
+  transition: transform 0.2s ease;
+}
+.login__ms:hover .login__arrow,
+.login__user:hover:not(:disabled) .login__arrow {
+  transform: translateX(3px);
+}
+.login__foot {
+  margin: 20px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.login__foot svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+/* Dev-mode test users: sketchy index cards, slightly askew. */
 .login__users {
   list-style: none;
-  margin: 0;
+  margin: 0 0 4px;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: 12px;
 }
 .login__user {
-  height: auto;
-  padding: 0.6rem 0.9rem;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
+  --skew: -0.4deg;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px 9px 10px;
+  border: 1.6px solid var(--text);
+  border-radius: 14px 6px 12px 7px / 7px 12px 6px 14px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transform: rotate(var(--skew));
+  box-shadow: 2px 3px 0 0 var(--text);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+.login__users li:nth-child(even) .login__user {
+  --skew: 0.35deg;
+  border-radius: 7px 13px 6px 12px / 12px 6px 14px 7px;
+}
+.login__user:hover:not(:disabled) {
+  background: #f4f3ff;
+  transform: rotate(var(--skew)) translate(-1px, -2px);
+  box-shadow: 4px 6px 0 0 var(--text);
+}
+.login__user:active:not(:disabled) {
+  transform: rotate(var(--skew)) translate(2px, 3px);
+  box-shadow: 0 0 0 0 var(--text);
+}
+.login__user:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.login__avatar {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1.6px solid var(--text);
+  border-radius: 50% 45% 50% 47%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.login__who {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  line-height: 1.3;
+}
+.login__who strong {
+  font-size: 15px;
+}
+.login__who span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+.login__user .login__arrow {
+  color: var(--muted);
+}
+
+/* "start here!": handwriting plus an arrow ending just left of the control. */
+.login__hint {
+  position: absolute;
+  right: calc(100% + 4px);
+  top: calc(50% - 78px);
+  width: 190px;
+  height: 96px;
+  pointer-events: none;
+}
+.login__hint span {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  font: 400 21px var(--hand);
+  color: var(--primary);
+  white-space: nowrap;
+  transform: rotate(-7deg);
+  clip-path: inset(-10px 100% -10px -10px);
+  animation: login-reveal 0.6s 1.9s steps(11, end) forwards;
+}
+.login__hint svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.login__hint path {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: login-ink 0.55s 2.45s ease-in-out forwards;
+}
+.login__hint path + path {
+  animation-delay: 2.95s;
+  animation-duration: 0.25s;
+}
+@keyframes login-reveal {
+  to {
+    clip-path: inset(-10px);
+  }
+}
+
+@media (max-width: 980px) {
+  .login__toolbar,
+  .login__zoom,
+  .login__hint {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .login__stage {
+    padding: 40px 16px;
+  }
+  .login__paper {
+    --tilt: -1deg;
+    padding: 40px 26px 22px;
+  }
+  .login__brand .brand img {
+    width: 40px;
+    height: 40px;
+  }
+  .login__brand .brand {
+    font-size: 31px;
+  }
+  .login__tagline {
+    margin-top: 18px;
+    font-size: 21px;
+  }
+  .login__lead {
+    margin: 14px 0 22px;
+    font-size: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login__paper,
+  .login__tape {
+    animation: none;
+  }
+  .login__border path,
+  .login__scribble path,
+  .login__hint path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .login__hint span {
+    animation: none;
+    clip-path: none;
+  }
+  .login__ms,
+  .login__user,
+  .login__arrow {
+    transition: none;
+  }
 }
 
 /* ---- folder browser ---------------------------------------------------------------- */
