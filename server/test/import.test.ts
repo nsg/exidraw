@@ -160,7 +160,7 @@ describe("POST /api/rooms/import", () => {
     expect(download.status).toBe(200);
     expect(download.headers.get("content-type")).toBe("image/png");
     expect(Buffer.from(await download.arrayBuffer())).toEqual(png);
-    expect((await json<TreeResponse>(`/api/tree?folderId=${folder.id}`)).rooms).toEqual([drawing]);
+    expect((await json<TreeResponse>(`/api/tree?folderId=${folder.id}`)).rooms).toEqual([{ ...drawing, access: [] }]);
   });
 
   test("drops deleted elements, ignores their malformed binaries and unreferenced files, and preserves missing-file statuses", async () => {

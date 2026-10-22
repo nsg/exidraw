@@ -1,12 +1,14 @@
 import { randomBytes } from "node:crypto";
 import {
   computeEffectiveRole,
+  summarizeAccess,
   roleAtLeast,
   REQUIRED_ROLE,
   MAX_FOLDER_DEPTH,
   computeSceneVersion,
 } from "@exidraw/shared";
 import type {
+  AccessEntry,
   Subject,
   NodeKind,
   Grant,
@@ -54,7 +56,8 @@ export class Tree {
   grants(kind: NodeKind, nodeId: string): Grant[] {
     return this.store
       .all<Row>(
-        "SELECT g.*,u.name AS display_name FROM grants g LEFT JOIN users u ON u.id=g.principal_user_id WHERE node_kind=? AND node_id=? ORDER BY g.id",
+        // A linked grant shows the user's current e-mail, which may differ from the one granted.
+        "SELECT g.*,u.name AS display_name,u.email AS user_email FROM grants g LEFT JOIN users u ON u.id=g.principal_user_id WHERE node_kind=? AND node_id=? ORDER BY g.id",
         kind,
         nodeId,
       )
@@ -66,7 +69,7 @@ export class Tree {
             ? { kind: "all" }
             : {
                 kind: "user",
-                email: g.principal_email,
+                email: g.user_email ?? g.principal_email,
                 userId: g.principal_user_id,
                 displayName: g.display_name ?? null,
               },
@@ -131,6 +134,9 @@ export class Tree {
       "SELECT * FROM rooms WHERE deleted_at IS NULL ORDER BY name,id",
     );
     const grants = this.store.all<Row>("SELECT * FROM grants");
+    const users = new Map(
+      this.store.all<Row>("SELECT id,email,name FROM users").map((u) => [u.id, u]),
+    );
     const folderById = new Map(folders.map((f) => [f.id, f]));
     const direct = new Map<string, Pick<Grant, "principal" | "role">[]>();
     for (const g of grants) {
@@ -142,8 +148,9 @@ export class Tree {
             ? { kind: "all" }
             : {
                 kind: "user",
-                email: g.principal_email,
+                email: users.get(g.principal_user_id)?.email ?? g.principal_email,
                 userId: g.principal_user_id,
+                displayName: users.get(g.principal_user_id)?.name ?? null,
               },
         role: g.role,
       });
@@ -188,6 +195,38 @@ export class Tree {
     for (const r of rooms)
       if (roleAtLeast(roomRoles.get(r.id), REQUIRED_ROLE.viewNode))
         mark(r.folder_id);
+    // A folder's summary as its children inherit it: "set here" becomes "from this folder".
+    // Memoised per folder, so every row costs its own grants plus one merge.
+    const inheritedBy = new Map<string, AccessEntry[]>();
+    const inheritedFrom = (folderId: string | null): AccessEntry[] => {
+      if (!folderId) return [];
+      const cached = inheritedBy.get(folderId);
+      if (cached) return cached;
+      const folder = folderById.get(folderId);
+      if (!folder) throw new HttpError("internal", "Broken folder parent");
+      const from = { kind: "folder" as const, id: folder.id, name: folder.name };
+      const result = summarizeAccess(
+        [{ from, grants: direct.get(`folder:${folderId}`) ?? [] }],
+        inheritedFrom(folder.parent_id),
+      );
+      inheritedBy.set(folderId, result);
+      return result;
+    };
+    // Only for nodes whose grants the caller may read anyway.
+    const access = (
+      role: Role | null | undefined,
+      kind: NodeKind,
+      nodeId: string,
+      parentId: string | null,
+    ): { access?: AccessEntry[] } => {
+      if (!roleAtLeast(role, REQUIRED_ROLE.readGrants)) return {};
+      return {
+        access: summarizeAccess(
+          [{ from: null, grants: direct.get(`${kind}:${nodeId}`) ?? [] }],
+          inheritedFrom(parentId),
+        ),
+      };
+    };
     const folderInfo = (f: Row): FolderInfo => ({
       id: f.id,
       parentId: f.parent_id,
@@ -195,6 +234,7 @@ export class Tree {
       role: folderRoles.get(f.id) ?? null,
       createdAt: f.created_at,
       updatedAt: f.updated_at,
+      ...access(folderRoles.get(f.id), "folder", f.id, f.parent_id),
     });
     const roomInfo = (r: Row): RoomInfo => ({
       id: r.id,
@@ -204,6 +244,7 @@ export class Tree {
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       url: `${this.config.publicUrl}/r/${r.id}`,
+      ...access(roomRoles.get(r.id), "room", r.id, r.folder_id),
     });
     return {
       folders,

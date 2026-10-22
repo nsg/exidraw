@@ -457,6 +457,94 @@ describe("backend over HTTP, WebSocket and MCP", () => {
     expect(Buffer.from(await download.arrayBuffer())).toEqual(bytes);
     expect((await request(path, carol)).status).toBe(404);
   });
+  test("lists who has access to owners only, in the tree and in search", async () => {
+    const alice = await login("alice"),
+      bob = await login("bob"),
+      carol = await login("carol");
+    const projects = await json(
+      "/api/folders",
+      alice,
+      "POST",
+      { parentId: "root", name: "Projects" },
+      201,
+    );
+    await json(`/api/nodes/folder/${projects.id}/grants`, alice, "PUT", {
+      grants: [{ kind: "all", role: "viewer" }],
+    });
+    const plan = await room(alice, "Plan", projects.id);
+    await grant(alice, plan.id, [
+      { kind: "user", email: "bob@example.test", role: "editor" },
+      { kind: "user", email: "carol@example.test", role: "owner" },
+    ]);
+    const tree = await json(`/api/tree?folderId=${projects.id}`, alice);
+    expect(tree.folder.access).toEqual([
+      { principal: { kind: "all" }, role: "viewer", from: null },
+    ]);
+    expect(tree.rooms[0].access).toEqual([
+      expect.objectContaining({
+        principal: expect.objectContaining({ email: "carol@example.test" }),
+        role: "owner",
+        from: null,
+      }),
+      {
+        principal: {
+          kind: "user",
+          email: "bob@example.test",
+          userId: (await json("/api/me", bob)).user.id,
+          displayName: "Bob Builder",
+        },
+        role: "editor",
+        from: null,
+      },
+      {
+        principal: { kind: "all" },
+        role: "viewer",
+        from: { kind: "folder", id: projects.id, name: "Projects" },
+      },
+    ]);
+    const bobTree = await json(`/api/tree?folderId=${projects.id}`, bob);
+    expect(bobTree.folder).not.toHaveProperty("access");
+    expect(bobTree.rooms[0]).not.toHaveProperty("access");
+    expect((await json("/api/search?q=plan", carol)).rooms[0].access).toHaveLength(3);
+    expect((await json("/api/search?q=plan", bob)).rooms[0]).not.toHaveProperty("access");
+    // A linked grant follows the user's current e-mail.
+    backend.store.run(
+      "UPDATE users SET email=? WHERE email=?",
+      "bob.builder@example.test",
+      "bob@example.test",
+    );
+    expect(
+      (await json(`/api/tree?folderId=${projects.id}`, alice)).rooms[0].access[1]
+        .principal.email,
+    ).toBe("bob.builder@example.test");
+  });
+  test("summarises access of a deep, heavily shared tree quickly", () => {
+    const admin = { userId: "admin", email: "admin@example.test", isAdmin: true };
+    let parent = "root";
+    backend.store.transaction(() => {
+      for (let level = 0; level < 16; level++) {
+        parent = backend.tree.createFolder(admin, parent, `Level ${level}`).id;
+        for (let i = 0; i < 500; i++)
+          backend.store.run(
+            "INSERT INTO grants(node_kind,node_id,principal_kind,principal_email,principal_user_id,role,created_at,created_by) VALUES('folder',?,'user',?,NULL,'viewer',0,'admin')",
+            parent,
+            `user${level}-${i}@example.test`,
+          );
+      }
+      for (let i = 0; i < 50; i++)
+        backend.store.run(
+          "INSERT INTO rooms(id,folder_id,name,created_at,updated_at,created_by) VALUES(?,?,?,0,0,'admin')",
+          `room-${i}`,
+          parent,
+          `Room ${i}`,
+        );
+    });
+    const started = performance.now();
+    const listing = backend.tree.list(admin, parent);
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(listing.rooms).toHaveLength(50);
+    expect(listing.rooms[0]!.access).toHaveLength(16 * 500);
+  });
   test("converges clients, echoes rejected versions, resyncs reconnects and changes roles live", async () => {
     const alice = await login("alice"),
       bob = await login("bob"),

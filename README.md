@@ -31,7 +31,8 @@ edits show up live, and they can render a drawing to look at it.
   carry permissions that apply to everything inside them.
 - **Sharing.** Give a role to *all logged-in users* or to specific people by
   email, even before they first log in. A share link is the room URL; whoever
-  opens it still has to log in and hold a grant.
+  opens it still has to log in and hold a grant. Owners see who has access
+  to each item at a glance in the folder listing.
 - **Entra ID login.** OpenID Connect with PKCE, restricted to your tenant.
   Guest accounts are rejected by default.
 - **Version history.** Automatic snapshots (at most one every 5 minutes, and
@@ -170,6 +171,16 @@ Projects/              ← all logged-in users = viewer
 │   └── Wireframes
 └── Drafts/            ← no grant: only admins see it
 ```
+
+**Seeing who has access.** In a folder you own, the *Who has access* column
+lists everyone who can reach each item and their role. *Everyone* comes first,
+as it raises everybody else (tooltips say when someone gets more through it),
+then access set on the item itself, then access inherited from the folder in
+muted, dashed chips; *Same as folder* when the item adds nothing. The people
+icon next to the folder name, and the one in a drawing's header, open the full
+list with the source of each role ("Set here" or "From folder …") and what each
+role can do. Only owners see who else has access; everyone else sees their own
+role.
 
 ---
 

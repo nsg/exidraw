@@ -13,7 +13,8 @@ import {
 } from "@exidraw/shared";
 import { api, ApiRequestError, errorMessage } from "../api";
 import { CollabClient, type ConnectionStatus, type FatalReason } from "../collab/CollabClient";
-import { ShareDialog } from "../components/ShareDialog";
+import { ShareDialog, type ShareTarget } from "../components/ShareDialog";
+import { AccessDialog, PeopleIcon } from "../components/AccessDialog";
 import { useToast } from "../components/Toasts";
 import { Brand, UserMenu } from "../components/Layout";
 import { HistoryDrawer } from "../room/HistoryDrawer";
@@ -112,7 +113,7 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
   const [synced, setSynced] = useState(false);
   const [fatal, setFatal] = useState<FatalReason | null>(null);
   const [excalidraw, setExcalidraw] = useState<ExcalidrawImperativeAPI | null>(null);
-  const [panel, setPanel] = useState<"share" | "history" | null>(null);
+  const [panel, setPanel] = useState<"share" | "access" | "history" | null>(null);
   const [inserting, setInserting] = useState(false);
   const clientRef = useRef<CollabClient | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -231,6 +232,7 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
   const canEdit = roleAtLeast(role, REQUIRED_ROLE.writeScene);
   const canShare = roleAtLeast(role, REQUIRED_ROLE.writeGrants);
   const folderHref = room.folderId === ROOT_FOLDER_ID ? SPA_ROUTES.root : SPA_ROUTES.folder(room.folderId);
+  const target: ShareTarget = { kind: "room", id: room.id, name: room.name, linkPath: SPA_ROUTES.room(room.id) };
 
   const copyLink = async () => {
     if (await copyText(absoluteUrl(SPA_ROUTES.room(room.id)))) notify("Link copied", "success");
@@ -267,6 +269,9 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
           {STATUS_TEXT[status]}
         </span>
         <span className="spacer" />
+        <button className="icon-btn icon-btn--svg" aria-label="Who has access" title="Who has access" onClick={() => setPanel("access")}>
+          <PeopleIcon />
+        </button>
         <button className="btn btn--ghost" onClick={() => setPanel(panel === "history" ? null : "history")}>
           History
         </button>
@@ -320,11 +325,9 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
       {inserting && canEdit && (
         <InsertDialog room={room} onInsert={insertDrawing} onClose={() => setInserting(false)} />
       )}
-      {panel === "share" && (
-        <ShareDialog
-          target={{ kind: "room", id: room.id, name: room.name, linkPath: SPA_ROUTES.room(room.id) }}
-          onClose={() => setPanel(null)}
-        />
+      {panel === "share" && <ShareDialog target={target} onClose={() => setPanel(null)} />}
+      {panel === "access" && (
+        <AccessDialog target={target} role={role} onManage={() => setPanel("share")} onClose={() => setPanel(null)} />
       )}
     </div>
   );

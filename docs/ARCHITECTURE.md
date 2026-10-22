@@ -353,6 +353,35 @@ in works the moment he logs in (matched by e-mail; linked to his user id then).
 Every path (REST, WS, MCP) resolves the role with the same function and
 checks it server-side before acting. The UI only uses roles to hide buttons.
 
+### 6.6 Who has access (`summarizeAccess`, `shared/src/access.ts`)
+
+The effective access of a node, per principal: the maximum role over the
+node's own grants and its ancestors', with `from` = the nearest place granting
+that role (`null` = the node itself, else `{ kind: "folder", id, name }`).
+Sorted by role (owner first), `all` before users, then by name. Admins are not
+listed (they are owners without a grant). Entries are per principal, so a user
+whose own role is below the `all` role really has the `all` role; the UI says
+so ("Editor via everyone").
+
+Principals: `all`; linked users (grant has a user id) are one person only by
+id; unlinked grants by lower-cased e-mail; an unlinked grant joins a linked
+user only when its e-mail is that user's **current** `users.email`. The server
+reports linked grants with the current e-mail (`grants()` and listings), since
+login may change a user's e-mail while old grants stay linked by id, and a new
+grant to the old address is someone else's (`grantMatches` agrees).
+
+Listings memoise one summary per folder as its children inherit it ("set
+here" relabelled to that folder), so each row costs its own grants plus one
+merge (`summarizeAccess(ownLevels, inherited)`).
+
+- `/api/tree` and `/api/search` fill `FolderInfo.access` / `RoomInfo.access`
+  with it, computed from the in-memory listing (no per-row queries), **only**
+  for nodes where the caller has `readGrants`; the field is absent otherwise.
+  So nobody learns more than `GET …/grants` would tell them. It falls through
+  to the MCP `list_folder`/`search` outputs, which pass these DTOs on.
+- The web app's access inspector runs the same function over a
+  `GrantsResponse` (`accessFromGrants`); non-owners see only their own role.
+
 ## 7. REST API
 
 Base `/api`. JSON bodies, `Content-Type: application/json`. Errors are
@@ -369,8 +398,8 @@ schemas in `shared/src/api.ts`; failures → `400 invalid` with zod issues in
 | `POST /auth/logout` | auth | → 204 |
 | `GET /api/me` | auth | → `MeResponse` |
 | `GET /api/users?q=` | auth | → `UsersResponse` (name/e-mail substring, max 50) |
-| `GET /api/tree?folderId=root` | viewer/traversal | → `TreeResponse` |
-| `GET /api/search?q=&inContent=0` | auth | → `SearchResponse` (only visible nodes) |
+| `GET /api/tree?folderId=root` | viewer/traversal | → `TreeResponse`; `access` on nodes the caller owns (§6.6) |
+| `GET /api/search?q=&inContent=0` | auth | → `SearchResponse` (only visible nodes; `access` as for the tree) |
 | `POST /api/folders` | editor on parent | `CreateFolderBody` → `201 FolderInfo` |
 | `PATCH /api/folders/:id` | editor (rename) / owner+editor-on-dest (move) | `UpdateFolderBody` → `FolderInfo` |
 | `DELETE /api/folders/:id` | owner | → 204; `409` if not empty; root cannot be deleted |

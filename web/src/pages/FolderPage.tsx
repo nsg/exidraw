@@ -15,6 +15,7 @@ import {
 import { api, ApiRequestError, errorMessage } from "../api";
 import { ConfirmDialog, PromptDialog } from "../components/Modal";
 import { ShareDialog, type ShareTarget } from "../components/ShareDialog";
+import { AccessChips, AccessDialog, PeopleIcon, accessTitle } from "../components/AccessDialog";
 import { FolderIcon, MoveDialog, RoomIcon, type MoveTarget } from "../components/MoveDialog";
 import { useToast } from "../components/Toasts";
 import {
@@ -37,7 +38,17 @@ type DialogState =
   | { type: "delete"; row: Row }
   | { type: "move"; target: MoveTarget }
   | { type: "share"; target: ShareTarget }
+  | { type: "access"; target: ShareTarget; role: Role | null }
   | null;
+
+function rowTarget(row: Row): ShareTarget {
+  return {
+    kind: row.kind,
+    id: row.node.id,
+    name: row.node.name,
+    ...(row.kind === "room" ? { linkPath: SPA_ROUTES.room(row.node.id) } : {}),
+  };
+}
 
 export function FolderPage() {
   const { folderId = ROOT_FOLDER_ID } = useParams();
@@ -92,17 +103,27 @@ export function FolderPage() {
     document.title = tree ? `${folderLabel(tree.folder)} · exidraw` : "exidraw";
   }, [tree]);
 
+  // Bumped to re-run the current search, e.g. after sharing changed the access column.
+  const [searchRun, setSearchRun] = useState(0);
   useEffect(() => {
     const q = query.trim();
     if (!q) {
       setResults(null);
       return;
     }
+    // A response for an older query or run must not overwrite a newer one, or bring results back.
+    let current = true;
     const timer = window.setTimeout(() => {
-      api.search(q).then(setResults, (err) => notify(errorMessage(err), "error"));
+      api.search(q).then(
+        (res) => current && setResults(res),
+        (err) => current && notify(errorMessage(err), "error"),
+      );
     }, 250);
-    return () => window.clearTimeout(timer);
-  }, [query, notify]);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [query, searchRun, notify]);
 
   const role = tree?.folder.role ?? null;
   const canCreate = roleAtLeast(role, REQUIRED_ROLE.createChild);
@@ -194,6 +215,7 @@ export function FolderPage() {
       ];
 
   const closeDialog = () => setDialog(null);
+  const folderTarget: ShareTarget = { kind: "folder", id: tree.folder.id, name: folderLabel(tree.folder) };
 
   return (
     <div className="folder-page">
@@ -207,6 +229,17 @@ export function FolderPage() {
           ))}
           <h1>{folderLabel(tree.folder)}</h1>
           {role && <span className={`badge badge--${role}`}>{ROLE_LABEL[role]}</span>}
+          {role && (
+            <button
+              className="access-button"
+              aria-label="Who has access"
+              title={tree.folder.access ? accessTitle(tree.folder.access) : "Who has access"}
+              onClick={() => setDialog({ type: "access", target: folderTarget, role })}
+            >
+              <PeopleIcon />
+              {tree.folder.access && <AccessChips entries={tree.folder.access} />}
+            </button>
+          )}
         </nav>
         <div className="page-header__actions">
           <input
@@ -220,9 +253,7 @@ export function FolderPage() {
           {canShare && (
             <button
               className="btn"
-              onClick={() =>
-                setDialog({ type: "share", target: { kind: "folder", id: tree.folder.id, name: folderLabel(tree.folder) } })
-              }
+              onClick={() => setDialog({ type: "share", target: folderTarget })}
             >
               Share
             </button>
@@ -275,6 +306,7 @@ export function FolderPage() {
               <th>Name</th>
               <th>Your access</th>
               <th>Updated</th>
+              <th>Who has access</th>
               <th aria-label="Actions" />
             </tr>
           </thead>
@@ -283,6 +315,8 @@ export function FolderPage() {
               <NodeRow
                 key={`${row.kind}:${row.node.id}`}
                 row={row}
+                inFolder={!results}
+                onAccess={() => setDialog({ type: "access", target: rowTarget(row), role: row.node.role })}
                 onAction={(action) => {
                   const name = row.node.name;
                   const parentId = row.kind === "folder" ? (row.node.parentId ?? ROOT_FOLDER_ID) : row.node.folderId;
@@ -294,15 +328,7 @@ export function FolderPage() {
                     case "move":
                       return setDialog({ type: "move", target: { kind: row.kind, id: row.node.id, name, parentId } });
                     case "share":
-                      return setDialog({
-                        type: "share",
-                        target: {
-                          kind: row.kind,
-                          id: row.node.id,
-                          name,
-                          ...(row.kind === "room" ? { linkPath: SPA_ROUTES.room(row.node.id) } : {}),
-                        },
-                      });
+                      return setDialog({ type: "share", target: rowTarget(row) });
                     case "copy":
                       return void copyText(absoluteUrl(SPA_ROUTES.room(row.node.id))).then(
                         (ok) => ok && notify("Link copied", "success"),
@@ -414,7 +440,24 @@ export function FolderPage() {
         />
       )}
       {dialog?.type === "move" && <MoveDialog target={dialog.target} onClose={closeDialog} onMoved={() => void load()} />}
-      {dialog?.type === "share" && <ShareDialog target={dialog.target} onClose={closeDialog} />}
+      {dialog?.type === "share" && (
+        <ShareDialog
+          target={dialog.target}
+          onClose={closeDialog}
+          onSaved={() => {
+            void load();
+            setSearchRun((n) => n + 1);
+          }}
+        />
+      )}
+      {dialog?.type === "access" && (
+        <AccessDialog
+          target={dialog.target}
+          role={dialog.role}
+          onManage={() => setDialog({ type: "share", target: dialog.target })}
+          onClose={closeDialog}
+        />
+      )}
     </div>
   );
 }
@@ -451,7 +494,18 @@ function uploadErrorMessage(fileName: string, err: unknown): string {
 
 type RowAction = "rename" | "delete" | "move" | "share" | "copy";
 
-function NodeRow({ row, onAction }: { row: Row; onAction: (a: RowAction) => void }) {
+function NodeRow({
+  row,
+  inFolder,
+  onAccess,
+  onAction,
+}: {
+  row: Row;
+  /** listed inside its folder (not search results), so inherited access is the folder's */
+  inFolder: boolean;
+  onAccess: () => void;
+  onAction: (a: RowAction) => void;
+}) {
   const role: Role | null = row.node.role;
   const href = row.kind === "folder" ? SPA_ROUTES.folder(row.node.id) : SPA_ROUTES.room(row.node.id);
   const actions: Array<{ action: RowAction; label: string; danger?: boolean }> = [
@@ -471,6 +525,18 @@ function NodeRow({ row, onAction }: { row: Row; onAction: (a: RowAction) => void
       </td>
       <td>{role ? <span className={`badge badge--${role}`}>{ROLE_LABEL[role]}</span> : <span className="muted">—</span>}</td>
       <td title={formatDate(row.node.updatedAt)}>{formatRelative(row.node.updatedAt)}</td>
+      <td className="nodes__access">
+        {row.node.access && (
+          <button
+            className="access-button"
+            aria-label={`Who has access to ${row.node.name}`}
+            title={accessTitle(row.node.access)}
+            onClick={onAccess}
+          >
+            <AccessChips entries={row.node.access} sameAsFolder={inFolder} />
+          </button>
+        )}
+      </td>
       <td className="nodes__actions">
         {actions.length > 0 && <RowMenu label={row.node.name} actions={actions} onAction={onAction} />}
       </td>

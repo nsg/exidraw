@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { ROLES, type Grant, type GrantInput, type GrantsResponse, type NodeKind, type Role, type UserInfo } from "@exidraw/shared";
+import { ROLES, ROLE_RANK, type GrantInput, type GrantsResponse, type NodeKind, type Role, type UserInfo } from "@exidraw/shared";
 import { api, errorMessage } from "../api";
 import { Modal } from "./Modal";
 import { useToast } from "./Toasts";
-import { ROLE_LABEL, absoluteUrl, copyText, folderLabel } from "../util";
+import { ROLE_LABEL, absoluteUrl, copyText, folderLabel, principalLabel } from "../util";
 
 export interface ShareTarget {
   kind: NodeKind;
@@ -19,14 +19,18 @@ interface PersonRow {
   role: Role;
 }
 
-function principalLabel(g: Grant): string {
-  if (g.principal.kind === "all") return "Everyone signed in";
-  return g.principal.displayName ? `${g.principal.displayName} (${g.principal.email})` : g.principal.email;
-}
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function ShareDialog({ target, onClose }: { target: ShareTarget; onClose: () => void }) {
+export function ShareDialog({
+  target,
+  onClose,
+  onSaved,
+}: {
+  target: ShareTarget;
+  onClose: () => void;
+  /** after the grants were saved, e.g. to reload a listing showing access */
+  onSaved?: () => void;
+}) {
   const notify = useToast();
   const [data, setData] = useState<GrantsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,11 +49,16 @@ export function ShareDialog({ target, onClose }: { target: ShareTarget; onClose:
         setData(res);
         const all = res.grants.find((g) => g.principal.kind === "all");
         setAllRole(all?.role ?? "");
-        setPeople(
-          res.grants.flatMap((g) =>
-            g.principal.kind === "user" ? [{ email: g.principal.email, label: principalLabel(g), role: g.role }] : [],
-          ),
-        );
+        // Two grants can show one address (a linked user's current e-mail); keep the higher role.
+        const byEmail = new Map<string, PersonRow>();
+        for (const g of res.grants) {
+          if (g.principal.kind !== "user") continue;
+          const known = byEmail.get(g.principal.email);
+          if (!known || ROLE_RANK[g.role] > ROLE_RANK[known.role]) {
+            byEmail.set(g.principal.email, { email: g.principal.email, label: principalLabel(g.principal), role: g.role });
+          }
+        }
+        setPeople([...byEmail.values()]);
       },
       (err) => setError(errorMessage(err)),
     );
@@ -94,6 +103,7 @@ export function ShareDialog({ target, onClose }: { target: ShareTarget; onClose:
     try {
       await api.putGrants(target.kind, target.id, { grants });
       notify("Sharing updated", "success");
+      onSaved?.();
       onClose();
     } catch (err) {
       notify(errorMessage(err), "error");
@@ -236,7 +246,7 @@ export function ShareDialog({ target, onClose }: { target: ShareTarget; onClose:
                 {inherited.map((i) =>
                   i.grants.map((g) => (
                     <li key={g.id}>
-                      <span>{principalLabel(g)}</span>
+                      <span>{principalLabel(g.principal)}</span>
                       <span className="badge">{ROLE_LABEL[g.role]}</span>
                       <span className="muted">from {folderLabel(i.from)}</span>
                     </li>

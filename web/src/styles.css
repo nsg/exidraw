@@ -145,6 +145,10 @@ code {
   background: #efeff3;
   color: var(--text);
 }
+.icon-btn--svg {
+  display: inline-grid;
+  place-items: center;
+}
 .link {
   border: 0;
   background: none;
@@ -166,7 +170,8 @@ select {
 input:focus,
 select:focus,
 .btn:focus-visible,
-.icon-btn:focus-visible {
+.icon-btn:focus-visible,
+.access-button:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
 }
@@ -407,6 +412,75 @@ select:focus,
   color: var(--primary);
   flex: none;
 }
+.nodes__access {
+  font-size: 0.85rem;
+}
+
+/* who has access: chips in listings and the folder header */
+.access-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.2rem 0.35rem;
+  margin: -0.2rem -0.35rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.breadcrumbs .access-button {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.access-button:hover {
+  background: #efeff3;
+  color: var(--text);
+}
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 15rem;
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.chip .icon {
+  flex: none;
+  color: var(--primary);
+}
+.chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip__role {
+  color: var(--muted);
+}
+.chip--inherited {
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+}
+.chip--inherited .icon {
+  color: var(--muted);
+}
+.chips__more {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
 .menu {
   position: relative;
   display: inline-block;
@@ -535,6 +609,57 @@ select:focus,
 }
 .share__add input {
   flex: 1;
+}
+
+/* access inspector */
+.access {
+  display: grid;
+  gap: 1.25rem;
+}
+.access-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.access-table th {
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.35rem 0.5rem 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.access-table td {
+  padding: 0.4rem 0.5rem 0.4rem 0;
+  border-bottom: 1px solid #f0f0f3;
+  vertical-align: top;
+}
+.access-table__who {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.access-table__who .icon {
+  flex: none;
+  align-self: center;
+  color: var(--primary);
+}
+.access-table__via {
+  margin-left: 0.4rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.access-legend {
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.access-legend div {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: baseline;
+}
+.access-legend dd {
+  margin: 0;
 }
 
 /* move picker */

@@ -5,6 +5,7 @@
  * All timestamps are epoch milliseconds. All ids are opaque strings.
  */
 import { z } from "zod";
+import type { AccessEntry } from "./access.js";
 import type { SceneElement } from "./elements.js";
 import type { Grant, NodeKind, Role } from "./roles.js";
 import { MAX_ELEMENTS_PER_ROOM, MAX_NAME_LENGTH } from "./constants.js";
@@ -76,6 +77,12 @@ export interface FolderInfo {
   role: Role | null;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Who can reach this node (`summarizeAccess`). Only in `/api/tree` and
+   * `/api/search`, and only when the caller may read grants (owner); absent
+   * otherwise.
+   */
+  access?: AccessEntry[];
 }
 
 export interface RoomInfo {
@@ -89,6 +96,12 @@ export interface RoomInfo {
   updatedAt: number;
   /** absolute URL of the room page (PUBLIC_URL + /r/<id>) */
   url: string;
+  /**
+   * Who can reach this node (`summarizeAccess`). Only in `/api/tree` and
+   * `/api/search`, and only when the caller may read grants (owner); absent
+   * otherwise.
+   */
+  access?: AccessEntry[];
 }
 
 /** GET /api/tree?folderId=<id> (default root) */

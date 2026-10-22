@@ -59,6 +59,31 @@ test("Alice and Bob collaborate live; viewer is read-only until granted editor",
   await expect.poll(() => elementCount(bob.page)).toBe(3);
   await expect.poll(() => elementCount(alice.page)).toBe(3);
 
+  // Who has access: the owner sees every principal and where the role comes from; Bob only his own role.
+  await alice.page.getByRole("button", { name: "Who has access" }).click();
+  const aliceAccess = alice.page.getByRole("dialog", { name: /^Who has access/ });
+  const bobRow = aliceAccess.getByRole("row", { name: /Bob Builder/ });
+  await expect(bobRow).toContainText("Editor");
+  await expect(bobRow).toContainText("Set here");
+  await aliceAccess.getByRole("button", { name: "Done" }).click();
+  await bob.page.getByRole("button", { name: "Who has access" }).click();
+  const bobAccess = bob.page.getByRole("dialog", { name: /^Who has access/ });
+  await expect(bobAccess.getByTestId("your-access")).toContainText("Editor");
+  await expect(bobAccess).toContainText("Only owners can see who else has access.");
+  await bobAccess.getByRole("button", { name: "Done" }).click();
+
+  // Promoted to owner Bob sees the list; demoted live, it disappears from the open dialog.
+  await alice.page.getByRole("button", { name: "Share" }).click();
+  await grantPerson(alice.page, "bob@example.test", "Owner");
+  await expect.poll(() => bob.page.evaluate(() => window.__exidraw?.role())).toBe("owner");
+  await bob.page.getByRole("button", { name: "Who has access" }).click();
+  await expect(bobAccess.getByRole("table")).toBeVisible();
+  await alice.page.getByRole("button", { name: "Share" }).click();
+  await grantPerson(alice.page, "bob@example.test", "Editor");
+  await expect(bobAccess.getByRole("table")).toBeHidden();
+  await expect(bobAccess).toContainText("Only owners can see who else has access.");
+  await bobAccess.getByRole("button", { name: "Done" }).click();
+
   // The editor grant is on the room only: Bob still views the folder, edits the room.
   await bob.page.goto(folderUrl);
   await expect(bob.page.getByRole("navigation", { name: "Breadcrumbs" })).toContainText("Viewer");
@@ -68,6 +93,11 @@ test("Alice and Bob collaborate live; viewer is read-only until granted editor",
   await alice.page.reload();
   await waitForRoomLive(alice.page);
   await expect.poll(() => elementCount(alice.page)).toBe(3);
+
+  // The listing shows the owner who has access: the room's own grant, and the folder's in the header.
+  await alice.page.goto(folderUrl);
+  await expect(alice.page.getByTestId("node-room")).toContainText("Bob Builder · Editor");
+  await expect(alice.page.getByRole("navigation", { name: "Breadcrumbs" })).toContainText("Bob Builder · Viewer");
 
   // Nothing talked to any other origin (CDNs, excalidraw.com, …).
   expect(alice.offOrigin).toEqual([]);

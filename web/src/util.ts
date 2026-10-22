@@ -1,4 +1,4 @@
-import { ROOT_FOLDER_ID, type Role } from "@exidraw/shared";
+import { ROOT_FOLDER_ID, type Principal, type Role } from "@exidraw/shared";
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -19,6 +19,17 @@ export function formatRelative(ms: number, now = Date.now()): string {
 }
 
 export const ROLE_LABEL: Record<Role, string> = { viewer: "Viewer", editor: "Editor", owner: "Owner" };
+
+/** "Everyone signed in", or "Name (e-mail)" once the person has signed in. */
+export function principalLabel(p: Principal): string {
+  if (p.kind === "all") return "Everyone signed in";
+  return p.displayName ? `${p.displayName} (${p.email})` : p.email;
+}
+
+/** Compact form for chips: "Everyone", or the person's name, else their e-mail. */
+export function principalShortName(p: Principal): string {
+  return p.kind === "all" ? "Everyone" : (p.displayName ?? p.email);
+}
 
 export async function copyText(text: string): Promise<boolean> {
   try {
