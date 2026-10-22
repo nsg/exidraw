@@ -34,6 +34,26 @@ export class FileStore {
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(fileId))
       throw new HttpError("invalid", "Invalid fileId");
   }
+  decodeDataURL(fileId: string, dataURL: string) {
+    this.validate(fileId);
+    const match = /^data:([^,]*);base64,([\s\S]*)$/i.exec(dataURL);
+    if (!match)
+      throw new HttpError("invalid", "Expected a base64 image data URL");
+    const mimeType = match[1]!.split(";")[0]!.trim().toLowerCase(),
+      payload = match[2]!;
+    if (!MIMES.has(mimeType))
+      throw new HttpError("invalid", "Unsupported image mime type");
+    // Buffer.from silently ignores garbage and malformed padding. Require
+    // standard, padded base64 and canonical padding bits before any writes.
+    if (payload.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload))
+      throw new HttpError("invalid", "Invalid base64 image payload");
+    const bytes = Buffer.from(payload, "base64");
+    if (bytes.toString("base64") !== payload)
+      throw new HttpError("invalid", "Invalid base64 image payload");
+    if (bytes.length > this.config.maxFileBytes)
+      throw new HttpError("too_large", "File exceeds MAX_FILE_BYTES");
+    return { mimeType, bytes };
+  }
   private path(roomId: string, fileId: string) {
     this.validate(fileId);
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(roomId))

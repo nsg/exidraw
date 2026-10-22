@@ -11,6 +11,7 @@ import {
   CreateFolderBody,
   UpdateFolderBody,
   CreateRoomBody,
+  ImportRoomBody,
   UpdateRoomBody,
   PutGrantsBody,
   CreateTokenBody,
@@ -40,6 +41,7 @@ import { Collaboration } from "./ws.js";
 import { Renderer, rendererDist } from "./renderer.js";
 import { McpTools } from "./mcp.js";
 import { HttpError } from "./errors.js";
+import { importRoom } from "./import.js";
 type Env = {
   Variables: {
     auth: AuthContext;
@@ -304,6 +306,13 @@ export function createBackend(config: Config = parseConfig()) {
       tree.createRoom(c.get("auth").subject, b.folderId, b.name),
       201,
     );
+  });
+  app.post("/api/rooms/import", async (c) => {
+    const body = ImportRoomBody.parse(await c.req.json());
+    const room = importRoom(tree, files, c.get("auth").subject, body, (error) =>
+      log.error({ err: error }, "Removing a failed import failed"),
+    );
+    return c.json(room, 201);
   });
   app.get("/api/rooms/:id", (c) =>
     c.json(tree.room(c.get("auth").subject, c.req.param("id"))),

@@ -375,6 +375,7 @@ schemas in `shared/src/api.ts`; failures → `400 invalid` with zod issues in
 | `PATCH /api/folders/:id` | editor (rename) / owner+editor-on-dest (move) | `UpdateFolderBody` → `FolderInfo` |
 | `DELETE /api/folders/:id` | owner | → 204; `409` if not empty; root cannot be deleted |
 | `POST /api/rooms` | editor on folder | `CreateRoomBody` → `201 RoomInfo` |
+| `POST /api/rooms/import` | editor on folder | `ImportRoomBody` → `201 RoomInfo` |
 | `GET /api/rooms/:id` | viewer | → `RoomInfo` |
 | `PATCH /api/rooms/:id` | editor (rename) / owner+editor-on-dest (move) | `UpdateRoomBody` → `RoomInfo`; broadcasts `room_updated` |
 | `DELETE /api/rooms/:id` | owner | → 204; closes WS clients with 4410 |
@@ -395,6 +396,15 @@ schemas in `shared/src/api.ts`; failures → `400 invalid` with zod issues in
 | `GET /healthz` | public | → `HealthResponse` (always 200 while HTTP is up) |
 
 Rules:
+- Room import checks folder `createChild` permission before validating element
+  envelopes, unique ids and referenced image data URLs. Deleted elements and
+  unreferenced files are discarded; other element JSON stays opaque, except
+  images with accepted files get `status: "saved"`. Data URL header mime types
+  override file metadata; base64 must be valid and decoded files respect
+  `MAX_FILE_BYTES` (`413`). The JSON body uses `MAX_HTTP_JSON_BYTES` (`413`).
+  All validation precedes writes. Room and scene (including scene version) are
+  inserted atomically; a file write failure removes the room and its metadata.
+  Import neither loads the room into memory nor creates a snapshot.
 - `fileId` path param: `^[A-Za-z0-9_-]{1,64}$`. `PUT` of an existing fileId is
   idempotent (`200`), bytes are not replaced.
 - Accepted upload mime types: `image/png, image/jpeg, image/gif, image/webp,

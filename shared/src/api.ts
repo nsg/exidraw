@@ -7,7 +7,7 @@
 import { z } from "zod";
 import type { SceneElement } from "./elements.js";
 import type { Grant, NodeKind, Role } from "./roles.js";
-import { MAX_NAME_LENGTH } from "./constants.js";
+import { MAX_ELEMENTS_PER_ROOM, MAX_NAME_LENGTH } from "./constants.js";
 
 // ---- Errors ------------------------------------------------------------------
 
@@ -118,6 +118,23 @@ export type UpdateFolderBody = z.infer<typeof UpdateFolderBody>;
 
 export const CreateRoomBody = z.object({ folderId: z.string().min(1), name });
 export type CreateRoomBody = z.infer<typeof CreateRoomBody>;
+
+/**
+ * POST /api/rooms/import → 201 RoomInfo. Creates a drawing from an uploaded
+ * Excalidraw file. The client parses and restores the file (`loadFromBlob`);
+ * the server checks element envelopes, ids, counts and files like any other
+ * write. `files` holds the binaries of image elements as data URLs, keyed by
+ * fileId, like the `files` map of a `.excalidraw` file
+ * (`{ mimeType, dataURL, … }`). Entries no image element references are
+ * ignored unchecked, so they are not typed here.
+ */
+export const ImportRoomBody = z.object({
+  folderId: z.string().min(1),
+  name,
+  elements: z.array(z.unknown()).max(MAX_ELEMENTS_PER_ROOM),
+  files: z.record(z.string(), z.unknown()).default({}),
+});
+export type ImportRoomBody = z.infer<typeof ImportRoomBody>;
 
 export const UpdateRoomBody = z
   .object({ name: name.optional(), folderId: z.string().min(1).optional() })

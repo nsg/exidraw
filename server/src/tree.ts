@@ -4,6 +4,7 @@ import {
   roleAtLeast,
   REQUIRED_ROLE,
   MAX_FOLDER_DEPTH,
+  computeSceneVersion,
 } from "@exidraw/shared";
 import type {
   Subject,
@@ -308,9 +309,19 @@ export class Tree {
     return this.folder(subject, this.row("folder", nodeId));
   }
   createRoom(subject: Subject, folderId: string, name: string): RoomInfo {
+    return this.createRoomWithElements(subject, folderId, name, []);
+  }
+  createRoomWithElements(
+    subject: Subject,
+    folderId: string,
+    name: string,
+    elements: SceneElement[],
+  ): RoomInfo {
     this.require(subject, "folder", folderId, "createChild");
     const nodeId = id(9),
-      now = Date.now();
+      now = Date.now(),
+      sceneVersion = computeSceneVersion(elements),
+      json = JSON.stringify(elements);
     this.store.transaction(() => {
       this.store.run(
         "INSERT INTO rooms(id,folder_id,name,created_at,updated_at,created_by) VALUES(?,?,?,?,?,?)",
@@ -324,8 +335,8 @@ export class Tree {
       this.store.run(
         "INSERT INTO scenes(room_id,elements,scene_version,updated_at) VALUES(?,?,?,?)",
         nodeId,
-        "[]",
-        0,
+        json,
+        sceneVersion,
         now,
       );
     });
