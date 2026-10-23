@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** 16px line icons for the folder sheet's buttons and menus; they inherit the text colour. */
+/** 16px line icons for the sketch buttons and menus; they inherit the text colour. */
 function Icon({ children }: { children: ReactNode }) {
   return (
     <svg className="line-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden>
@@ -105,5 +105,31 @@ export function DotsIcon() {
       <circle cx="10" cy="9.6" r="1.6" fill="currentColor" />
       <circle cx="15.5" cy="10.2" r="1.6" fill="currentColor" />
     </svg>
+  );
+}
+
+export function CopyIcon() {
+  return (
+    <Icon>
+      <path d="M5.5 5.2V3.4c0-.7.5-1.1 1.1-1.1h6c.7 0 1.1.4 1.1 1.1v6.1c0 .7-.4 1.1-1.1 1.1h-1.8" />
+      <path d="M3.4 5.4h6c.7 0 1.1.4 1.1 1.1v6.1c0 .7-.4 1.1-1.1 1.1h-6c-.7 0-1.1-.4-1.1-1.1V6.5c0-.7.4-1.1 1.1-1.1z" />
+    </Icon>
+  );
+}
+
+export function HistoryIcon() {
+  return (
+    <Icon>
+      <path d="M2.6 8a5.4 5.4 0 1 0 1.6-3.8" />
+      <path d="M2.3 2.6v2.6h2.6M8 5v3.2l2.2 1.4" />
+    </Icon>
+  );
+}
+
+export function BackIcon() {
+  return (
+    <Icon>
+      <path d="M13.5 8.2H3M6.6 4.4 2.8 8.2l3.8 3.7" />
+    </Icon>
   );
 }

@@ -1,50 +1,5 @@
-import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
-import { PencilOutline, useElementSize, type Size } from "../sketch/Paper";
+import { useMemo, type CSSProperties } from "react";
 import { FILL_COLORS, INK, Rough, hashSeed, pick, rectPts, smooth, type Pt } from "../sketch/rough";
-
-/**
- * The folder page's board: a dotted grid with one sheet of paper taped to it,
- * outlined in pencil. `children` go on the sheet, `margin` beside it.
- */
-export function SheetOnBoard({ margin, children }: { margin?: ReactNode; children: ReactNode }) {
-  const ref = useRef<HTMLElement>(null);
-  const size = useElementSize(ref);
-  return (
-    <>
-      <div className="board" aria-hidden />
-      <div className="desk">
-        {margin}
-        <section className="sheet" ref={ref}>
-          <div className="sheet__tape" aria-hidden />
-          <div className="sheet__tape sheet__tape--corner" aria-hidden />
-          {size && <PencilOutline size={size} className="sheet__border" roughness={sheetRoughness(size)} />}
-          {children}
-        </section>
-      </div>
-    </>
-  );
-}
-
-/** Long edges get a gentler hand than the login card's, or a big sheet looks crumpled. */
-function sheetRoughness({ w, h }: Size): [number, number] {
-  const k = Math.min(1, 440 / Math.max(w, h));
-  return [Math.max(0.45, 1.1 * k), Math.max(0.55, 1.3 * k)];
-}
-
-/** A pencil line across a table row, stretched to the row's width. Same id, same wobble. */
-export function RowRule({ id, double = false }: { id: string; double?: boolean }) {
-  const paths = useMemo(() => {
-    const r = new Rough(hashSeed(id));
-    return double ? [r.line(0, 2.5, 1000, 3.5, 0.55), r.line(0, 4, 1000, 3, 0.55)] : [r.line(0, 3, 1000, 3, 0.55)];
-  }, [id, double]);
-  return (
-    <svg className="rule" viewBox="0 0 1000 6" preserveAspectRatio="none" aria-hidden>
-      {paths.map((d, i) => (
-        <path key={i} pathLength={1} d={d} />
-      ))}
-    </svg>
-  );
-}
 
 const stroke = { fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
 

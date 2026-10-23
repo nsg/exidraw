@@ -16,7 +16,11 @@ import { CollabClient, type ConnectionStatus, type FatalReason } from "../collab
 import { ShareDialog, type ShareTarget } from "../components/ShareDialog";
 import { AccessDialog, PeopleIcon } from "../components/AccessDialog";
 import { useToast } from "../components/Toasts";
-import { Brand, UserMenu } from "../components/Layout";
+import { Brand, TopbarLine, UserMenu } from "../components/Layout";
+import { Splash, StatusPage } from "../components/StatusPage";
+import { BackIcon, HistoryIcon, LinkIcon, ShareIcon } from "../folder/icons";
+import { PencilLoader } from "../sketch/Paper";
+import type { DoodleKind } from "../sketch/doodles";
 import { HistoryDrawer } from "../room/HistoryDrawer";
 import { InsertDialog } from "../room/InsertDialog";
 import { insertIntoScene, interceptDrawingDrops } from "../room/insertScene";
@@ -83,10 +87,12 @@ export function RoomPage() {
     return error.notFound ? (
       <NotFoundPage message="This drawing does not exist, or you do not have access to it." />
     ) : (
-      <div className="splash">{error.message}</div>
+      <StatusPage title="Could not open the drawing" doodle="offline">
+        <p className="status-page__text">{error.message}</p>
+      </StatusPage>
     );
   }
-  if (!room) return <div className="splash">Loading…</div>;
+  if (!room) return <Splash />;
   return <RoomEditor key={room.id} initialRoom={room} />;
 }
 
@@ -95,6 +101,13 @@ const FATAL_TEXT: Record<FatalReason, string> = {
   forbidden: "You no longer have access to this drawing.",
   not_found: "This drawing does not exist, or you do not have access to it.",
   deleted: "This drawing was deleted.",
+};
+
+const FATAL_NOTE: Record<FatalReason, { title: string; doodle: DoodleKind }> = {
+  unauthenticated: { title: "Signed out", doodle: "locked" },
+  forbidden: { title: "No access", doodle: "locked" },
+  not_found: { title: "Not found", doodle: "lost" },
+  deleted: { title: "Deleted", doodle: "lost" },
 };
 
 const STATUS_TEXT: Record<ConnectionStatus, string> = {
@@ -238,25 +251,16 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
     if (await copyText(absoluteUrl(SPA_ROUTES.room(room.id)))) notify("Link copied", "success");
   };
 
-  if (fatal) {
-    return (
-      <div className="splash">
-        <p>{FATAL_TEXT[fatal]}</p>
-        <Link className="btn" to={SPA_ROUTES.root}>
-          Back to drawings
-        </Link>
-      </div>
-    );
-  }
+  if (fatal) return <NotFoundPage {...FATAL_NOTE[fatal]} message={FATAL_TEXT[fatal]} />;
 
   return (
     <div className="room">
-      <header className="room__header">
-        <Link to={SPA_ROUTES.root} className="room__brand" aria-label="All drawings">
+      <header className="topbar room__header">
+        <Link to={SPA_ROUTES.root} className="topbar__brand room__brand" aria-label="All drawings">
           <Brand />
         </Link>
-        <Link to={folderHref} className="room__back" title="Back to folder">
-          ←
+        <Link to={folderHref} className="room__back" title="Back to folder" aria-label="Back to folder">
+          <BackIcon />
         </Link>
         <RoomName room={room} canRename={canEdit} onRenamed={setRoom} />
         {!canEdit && (
@@ -265,26 +269,37 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
           </span>
         )}
         <span className={`status status--${status}`} data-testid="connection-status" title={STATUS_TEXT[status]}>
-          <span className="status__dot" />
-          {STATUS_TEXT[status]}
+          <span className="status__dot" aria-hidden />
+          <span className="status__text">{STATUS_TEXT[status]}</span>
         </span>
         <span className="spacer" />
-        <button className="icon-btn icon-btn--svg" aria-label="Who has access" title="Who has access" onClick={() => setPanel("access")}>
-          <PeopleIcon />
-        </button>
-        <button className="btn btn--ghost" onClick={() => setPanel(panel === "history" ? null : "history")}>
-          History
-        </button>
-        {canShare ? (
-          <button className="btn btn--primary" onClick={() => setPanel("share")}>
-            Share
+        <span className="room__actions">
+          <button
+            className="sketch-btn sketch-btn--small sketch-btn--icon"
+            aria-label="Who has access"
+            title="Who has access"
+            onClick={() => setPanel("access")}
+          >
+            <PeopleIcon />
           </button>
-        ) : (
-          <button className="btn" onClick={() => void copyLink()}>
-            Copy link
+          <button className="sketch-btn sketch-btn--small" onClick={() => setPanel(panel === "history" ? null : "history")}>
+            <HistoryIcon />
+            History
           </button>
-        )}
+          {canShare ? (
+            <button className="sketch-btn sketch-btn--small sketch-btn--primary" onClick={() => setPanel("share")}>
+              <ShareIcon />
+              Share
+            </button>
+          ) : (
+            <button className="sketch-btn sketch-btn--small" onClick={() => void copyLink()}>
+              <LinkIcon />
+              Copy link
+            </button>
+          )}
+        </span>
         <UserMenu />
+        <TopbarLine />
       </header>
       <div className="room__canvas" ref={canvasRef}>
         <Excalidraw
@@ -317,7 +332,11 @@ function RoomEditor({ initialRoom }: { initialRoom: RoomInfo }) {
             <MainMenu.DefaultItems.ToggleTheme />
           </MainMenu>
         </Excalidraw>
-        {!synced && <div className="room__overlay">Loading drawing…</div>}
+        {!synced && (
+          <div className="room__overlay">
+            <PencilLoader label="Loading drawing…" />
+          </div>
+        )}
         {panel === "history" && excalidraw && (
           <HistoryDrawer roomId={room.id} canRestore={canEdit} excalidraw={excalidraw} onClose={() => setPanel(null)} />
         )}
@@ -379,7 +398,7 @@ function RoomName({ room, canRename, onRenamed }: { room: RoomInfo; canRename: b
   };
   return (
     <input
-      className="room__name-input"
+      className="sketch-input room__name-input"
       aria-label="Drawing name"
       defaultValue={room.name}
       autoFocus

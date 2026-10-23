@@ -15,7 +15,7 @@ import {
 import { api, ApiRequestError, errorMessage } from "../api";
 import { ConfirmDialog, PromptDialog } from "../components/Modal";
 import { ShareDialog, type ShareTarget } from "../components/ShareDialog";
-import { AccessDialog, AccessSummary, PeopleIcon, accessTitle } from "../components/AccessDialog";
+import { AccessDialog, AccessSummary, PeopleIcon, RoleMark, accessTitle } from "../components/AccessDialog";
 import { MoveDialog, type MoveTarget } from "../components/MoveDialog";
 import { useToast } from "../components/Toasts";
 import {
@@ -27,7 +27,8 @@ import {
   uploadElements,
 } from "../importing";
 import { NotFoundPage } from "./NotFoundPage";
-import { DrawingSketch, FolderSketch, MarginDoodles, RowRule, SheetOnBoard } from "../folder/Sheet";
+import { StatusPage } from "../components/StatusPage";
+import { DrawingSketch, FolderSketch, MarginDoodles } from "../folder/Sheet";
 import {
   DeleteIcon,
   DotsIcon,
@@ -41,8 +42,8 @@ import {
   ShareIcon,
   UploadIcon,
 } from "../folder/icons";
-import { PencilOutline, Scribble, StartHint, useElementSize } from "../sketch/Paper";
-import { ROLE_LABEL, absoluteUrl, copyText, folderLabel, formatDate, formatRelative } from "../util";
+import { PencilLoader, PencilOutline, PencilRule, Scribble, SheetOnBoard, StartHint, useElementSize } from "../sketch/Paper";
+import { absoluteUrl, copyText, folderLabel, formatDate, formatRelative } from "../util";
 
 type Row = { kind: "folder"; node: FolderInfo } | { kind: "room"; node: RoomInfo };
 
@@ -231,14 +232,22 @@ export function FolderPage() {
   }, [acceptDrops]);
 
   if (notFound) return <NotFoundPage message="This folder does not exist, or you do not have access to it." />;
-  if (error) return <div className="alert alert--error">{error}</div>;
-  const pageClass = `folder-page${intro ? " folder-page--intro" : ""}`;
+  if (error) {
+    return (
+      <StatusPage title="Could not load this folder" doodle="offline">
+        <p className="status-page__text" role="alert">
+          {error}
+        </p>
+      </StatusPage>
+    );
+  }
+  const pageClass = `board-page folder-page${intro ? " folder-page--intro" : ""}`;
   // Same element tree as below, so the sheet stays put while a folder loads.
   if (!tree) {
     return (
       <div className={pageClass}>
         <SheetOnBoard>
-          <p className="sheet__loading">Loading…</p>
+          <PencilLoader className="sheet__loading" />
         </SheetOnBoard>
       </div>
     );
@@ -304,9 +313,10 @@ export function FolderPage() {
         </nav>
 
         <div className="sheet__tools">
-          <label className="sheet__search">
+          <label className="search-field sheet__search">
             <SearchIcon />
             <input
+              className="sketch-input"
               type="search"
               placeholder="Search drawings…"
               aria-label="Search"
@@ -374,7 +384,7 @@ export function FolderPage() {
                 <tr>
                   <th>
                     Name
-                    <RowRule id="listing-head" double />
+                    <PencilRule id="listing-head" double />
                   </th>
                   <th className="listing__role">Your access</th>
                   <th className="listing__updated">Updated</th>
@@ -658,7 +668,7 @@ function NodeRow({
           <path pathLength={1} d="M2 15c9-6 20-7 33-3" />
           <path pathLength={1} d="M28 5l9 7-9 6" />
         </svg>
-        <RowRule id={row.node.id} />
+        <PencilRule id={row.node.id} />
         <span className="listing__name-in">
           {row.kind === "folder" ? <FolderSketch id={row.node.id} /> : <DrawingSketch id={row.node.id} />}
           <Link to={href}>{row.node.name}</Link>
@@ -766,11 +776,6 @@ function MenuPaper({ children }: { children: ReactNode }) {
       {children}
     </div>
   );
-}
-
-/** Your role, as a highlighter swipe. */
-function RoleMark({ role }: { role: Role }) {
-  return <span className={`marker marker--${role}`}>{ROLE_LABEL[role]}</span>;
 }
 
 const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;

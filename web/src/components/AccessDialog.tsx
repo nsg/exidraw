@@ -5,6 +5,7 @@ import { Modal } from "./Modal";
 import type { ShareTarget } from "./ShareDialog";
 import { useMe } from "../session";
 import { FACE_COLORS, pick } from "../sketch/rough";
+import { PencilLoader, PencilRule } from "../sketch/Paper";
 import { initials } from "./Layout";
 import { ROLE_LABEL, folderLabel, principalLabel, principalShortName } from "../util";
 
@@ -70,11 +71,11 @@ export function AccessDialog({
       wide
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="sketch-btn" onClick={onClose}>
             Done
           </button>
           {roleAtLeast(role, REQUIRED_ROLE.writeGrants) && (
-            <button type="button" className="btn btn--primary" onClick={onManage}>
+            <button type="button" className="sketch-btn sketch-btn--primary" onClick={onManage}>
               Manage sharing
             </button>
           )}
@@ -82,10 +83,10 @@ export function AccessDialog({
       }
     >
       <div className="access">
-        <p data-testid="your-access">
-          Your access:{" "}
+        <p className="access__yours" data-testid="your-access">
+          <span className="access__label">Your access:</span>{" "}
           {role ? (
-            <span className={`badge badge--${role}`}>{ROLE_LABEL[role]}</span>
+            <RoleMark role={role} />
           ) : (
             <span className="muted">none (you can only open folders inside it)</span>
           )}
@@ -96,13 +97,16 @@ export function AccessDialog({
           <h3>People with access</h3>
           {!isOwner && <p className="muted">Only owners can see who else has access.</p>}
           {isOwner && error && <div className="alert alert--error">{error}</div>}
-          {isOwner && !entries && !error && <p className="muted">Loading…</p>}
+          {isOwner && !entries && !error && <PencilLoader className="pencil-loader--small" />}
           {shown && shown.length === 0 && <p className="muted">Nobody has been given access.</p>}
           {shown && shown.length > 0 && (
-            <table className="access-table">
+            <table className="ruled-table access-table">
               <thead>
                 <tr>
-                  <th>Who</th>
+                  <th>
+                    Who
+                    <PencilRule id="access-head" double />
+                  </th>
                   <th>Role</th>
                   <th>Source</th>
                 </tr>
@@ -111,8 +115,9 @@ export function AccessDialog({
                 {shown.map((e) => (
                   <tr key={e.principal.kind === "all" ? "all" : e.principal.email}>
                     <td>
+                      <PencilRule id={`access:${e.principal.kind === "all" ? "all" : e.principal.email}`} />
                       <span className="access-table__who">
-                        <PrincipalIcon entry={e} />
+                        <PrincipalFace entry={e} />
                         {e.principal.kind === "user" && e.principal.displayName ? (
                           <span>
                             {e.principal.displayName} <span className="muted">{e.principal.email}</span>
@@ -123,10 +128,10 @@ export function AccessDialog({
                       </span>
                     </td>
                     <td>
-                      <span className={`badge badge--${e.role}`}>{ROLE_LABEL[e.role]}</span>
+                      <RoleMark role={e.role} />
                       <ViaEveryone entry={e} entries={shown} />
                     </td>
-                    <td className="muted">{sourceLabel(e)}</td>
+                    <td className="access-table__source">{sourceLabel(e)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -141,7 +146,7 @@ export function AccessDialog({
             {LEGEND.map(({ role, text }) => (
               <div key={role}>
                 <dt>
-                  <span className={`badge badge--${role}`}>{ROLE_LABEL[role]}</span>
+                  <RoleMark role={role} />
                 </dt>
                 <dd>{text}</dd>
               </div>
@@ -238,32 +243,32 @@ export function AccessSummary({
 /** Initials in a marker colour of their own, or a globe for everyone. */
 function PrincipalFace({ entry }: { entry: AccessEntry }) {
   const p = entry.principal;
-  const className = `face${p.kind === "all" ? " face--everyone" : ""}${entry.from ? " face--inherited" : ""}`;
   if (p.kind === "all") {
     return (
-      <span className={className}>
+      <span className={`face face--everyone${entry.from ? " face--inherited" : ""}`} aria-hidden>
         <EveryoneIcon />
       </span>
     );
   }
+  return <PersonFace email={p.email} name={p.displayName} inherited={!!entry.from} />;
+}
+
+/** A person's initials in their marker colour; decoration beside their name. */
+export function PersonFace({ email, name, inherited = false }: { email: string; name?: string | null; inherited?: boolean }) {
   return (
-    <span className={className} style={{ "--marker": pick(FACE_COLORS, p.email) } as CSSProperties}>
-      {initials(p.displayName ?? p.email.split("@")[0]!.replace(/[._-]+/g, " "))}
+    <span
+      className={`face${inherited ? " face--inherited" : ""}`}
+      style={{ "--marker": pick(FACE_COLORS, email) } as CSSProperties}
+      aria-hidden
+    >
+      {initials(name ?? email.split("@")[0]!.replace(/[._-]+/g, " "))}
     </span>
   );
 }
 
-function PrincipalIcon({ entry }: { entry: AccessEntry }) {
-  return entry.principal.kind === "all" ? <EveryoneIcon /> : <PersonIcon />;
-}
-
-function PersonIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden>
-      <circle cx="10" cy="7" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M3.8 17c.6-3.2 3.1-5 6.2-5s5.6 1.8 6.2 5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
+/** A role, as a highlighter swipe. */
+export function RoleMark({ role }: { role: Role }) {
+  return <span className={`marker marker--${role}`}>{ROLE_LABEL[role]}</span>;
 }
 
 function EveryoneIcon() {

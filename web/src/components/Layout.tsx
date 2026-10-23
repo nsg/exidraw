@@ -7,6 +7,14 @@ import { FACE_COLORS, Rough, pick } from "../sketch/rough";
 /** The pencil line under the top bar, stretched to its width. */
 const TOPBAR_LINE = new Rough(5).line(0, 3, 1000, 3.4, 0.5);
 
+export function TopbarLine() {
+  return (
+    <svg className="topbar__line" viewBox="0 0 1000 6" preserveAspectRatio="none" aria-hidden>
+      <path d={TOPBAR_LINE} />
+    </svg>
+  );
+}
+
 export function Brand() {
   return (
     <span className="brand">
@@ -30,7 +38,7 @@ export function UserMenu() {
         {me.isAdmin && <span className="badge">admin</span>}
       </span>
       <button
-        className="btn btn--ghost"
+        className="user-menu__signout"
         onClick={async () => {
           await logout();
           navigate(SPA_ROUTES.login, { replace: true });
@@ -65,9 +73,7 @@ export function Layout() {
           </NavLink>
         </nav>
         <UserMenu />
-        <svg className="topbar__line" viewBox="0 0 1000 6" preserveAspectRatio="none" aria-hidden>
-          <path d={TOPBAR_LINE} />
-        </svg>
+        <TopbarLine />
       </header>
       <main className="content">
         <Outlet />

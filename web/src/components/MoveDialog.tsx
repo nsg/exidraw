@@ -4,6 +4,8 @@ import { api, errorMessage } from "../api";
 import { Modal } from "./Modal";
 import { useToast } from "./Toasts";
 import { folderLabel } from "../util";
+import { FolderSketch } from "../folder/Sheet";
+import { PencilLoader } from "../sketch/Paper";
 
 export interface MoveTarget {
   kind: NodeKind;
@@ -50,16 +52,17 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget; o
       onClose={onClose}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="sketch-btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="btn btn--primary" disabled={!canDrop || busy} onClick={() => void move()}>
+          <button type="button" className="sketch-btn sketch-btn--primary" disabled={!canDrop || busy} onClick={() => void move()}>
             Move here
           </button>
         </>
       }
     >
       {error && <div className="alert alert--error">{error}</div>}
+      {!tree && !error && <PencilLoader className="pencil-loader--small" />}
       {tree && (
         <div className="picker">
           <PickerBreadcrumbs tree={tree} onOpen={setFolderId} />
@@ -69,11 +72,12 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget; o
               .map((f) => (
                 <li key={f.id}>
                   <button type="button" className="picker__item" onClick={() => setFolderId(f.id)}>
-                    <FolderIcon /> {f.name}
+                    <FolderSketch id={f.id} />
+                    <span className="picker__name">{f.name}</span>
                   </button>
                 </li>
               ))}
-            {tree.folders.length === 0 && <li className="muted">No sub-folders</li>}
+            {tree.folders.length === 0 && <li className="picker__none">No sub-folders</li>}
           </ul>
           {!roleAtLeast(tree.folder.role, "editor") && (
             <p className="hint">You cannot add items to this folder.</p>
@@ -90,11 +94,11 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget; o
 /** Path of the folder being browsed in a picker; ancestors are clickable. */
 export function PickerBreadcrumbs({ tree, onOpen }: { tree: TreeResponse; onOpen: (folderId: string) => void }) {
   return (
-    <div className="breadcrumbs">
+    <div className="crumbs picker__crumbs">
       {[...tree.breadcrumbs, tree.folder].map((b, i, all) => (
         <span key={b.id}>
           {i < all.length - 1 ? (
-            <button type="button" className="link" onClick={() => onOpen(b.id)}>
+            <button type="button" className="crumbs__link" onClick={() => onOpen(b.id)}>
               {folderLabel(b)}
             </button>
           ) : (
@@ -104,22 +108,5 @@ export function PickerBreadcrumbs({ tree, onOpen }: { tree: TreeResponse; onOpen
         </span>
       ))}
     </div>
-  );
-}
-
-export function FolderIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden>
-      <path d="M2.5 5.5a1.5 1.5 0 0 1 1.5-1.5h3.6l1.6 1.8H16a1.5 1.5 0 0 1 1.5 1.5v7.7a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5z" fill="currentColor" opacity=".85" />
-    </svg>
-  );
-}
-
-export function RoomIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden>
-      <rect x="3" y="3" width="14" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="m6.5 13 4.5-4.5 2 2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
   );
 }

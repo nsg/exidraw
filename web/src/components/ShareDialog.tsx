@@ -4,6 +4,9 @@ import { api, errorMessage } from "../api";
 import { Modal } from "./Modal";
 import { useToast } from "./Toasts";
 import { ROLE_LABEL, absoluteUrl, copyText, folderLabel, principalLabel } from "../util";
+import { PersonFace, RoleMark } from "./AccessDialog";
+import { LinkIcon } from "../folder/icons";
+import { CrossIcon, PencilLoader, PencilRule } from "../sketch/Paper";
 
 export interface ShareTarget {
   kind: NodeKind;
@@ -16,6 +19,8 @@ export interface ShareTarget {
 interface PersonRow {
   email: string;
   label: string;
+  /** for their initials, when known */
+  name?: string;
   role: Role;
 }
 
@@ -55,7 +60,12 @@ export function ShareDialog({
           if (g.principal.kind !== "user") continue;
           const known = byEmail.get(g.principal.email);
           if (!known || ROLE_RANK[g.role] > ROLE_RANK[known.role]) {
-            byEmail.set(g.principal.email, { email: g.principal.email, label: principalLabel(g.principal), role: g.role });
+            byEmail.set(g.principal.email, {
+              email: g.principal.email,
+              label: principalLabel(g.principal),
+              ...(g.principal.displayName ? { name: g.principal.displayName } : {}),
+              role: g.role,
+            });
           }
         }
         setPeople([...byEmail.values()]);
@@ -88,7 +98,7 @@ export function ShareDialog({
       const label = known ? `${known.name} (${known.email})` : email;
       const existing = rows.findIndex((r) => r.email === email);
       if (existing >= 0) return rows.map((r, i) => (i === existing ? { ...r, role: newRole } : r));
-      return [...rows, { email, label, role: newRole }];
+      return [...rows, { email, label, ...(known ? { name: known.name } : {}), role: newRole }];
     });
     setNewEmail("");
     setDirty(true);
@@ -124,25 +134,26 @@ export function ShareDialog({
           {target.linkPath && (
             <button
               type="button"
-              className="btn btn--ghost footer-left"
+              className="sketch-btn sketch-btn--quiet modal__footer-left"
               onClick={async () => {
                 if (await copyText(absoluteUrl(target.linkPath!))) notify("Link copied", "success");
               }}
             >
+              <LinkIcon />
               Copy link
             </button>
           )}
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="sketch-btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="btn btn--primary" disabled={!dirty || saving || !data} onClick={() => void save()}>
+          <button type="button" className="sketch-btn sketch-btn--primary" disabled={!dirty || saving || !data} onClick={() => void save()}>
             {saving ? "Saving…" : "Save"}
           </button>
         </>
       }
     >
       {error && <div className="alert alert--error">{error}</div>}
-      {!data && !error && <p className="muted">Loading…</p>}
+      {!data && !error && <PencilLoader className="pencil-loader--small" />}
       {data && (
         <div className="share">
           <section>
@@ -150,6 +161,7 @@ export function ShareDialog({
             <label className="field field--inline">
               <span>Everyone signed in</span>
               <select
+                className="sketch-select"
                 aria-label="General access"
                 value={allRole}
                 onChange={(e) => {
@@ -173,8 +185,11 @@ export function ShareDialog({
             <ul className="share__people">
               {people.map((p) => (
                 <li key={p.email}>
+                  <PencilRule id={`share:${p.email}`} />
+                  <PersonFace email={p.email} name={p.name} />
                   <span className="share__who">{p.label}</span>
                   <select
+                    className="sketch-select"
                     aria-label={`Role for ${p.email}`}
                     value={p.role}
                     onChange={(e) => {
@@ -191,14 +206,14 @@ export function ShareDialog({
                   </select>
                   <button
                     type="button"
-                    className="icon-btn"
+                    className="close-btn"
                     aria-label={`Remove ${p.email}`}
                     onClick={() => {
                       setPeople((rows) => rows.filter((r) => r.email !== p.email));
                       setDirty(true);
                     }}
                   >
-                    ×
+                    <CrossIcon />
                   </button>
                 </li>
               ))}
@@ -211,6 +226,7 @@ export function ShareDialog({
               }}
             >
               <input
+                className="sketch-input"
                 type="email"
                 placeholder="name@company.com"
                 aria-label="Add person by e-mail"
@@ -225,14 +241,14 @@ export function ShareDialog({
                   </option>
                 ))}
               </datalist>
-              <select aria-label="Role for new person" value={newRole} onChange={(e) => setNewRole(e.target.value as Role)}>
+              <select className="sketch-select" aria-label="Role for new person" value={newRole} onChange={(e) => setNewRole(e.target.value as Role)}>
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]}
                   </option>
                 ))}
               </select>
-              <button type="submit" className="btn">
+              <button type="submit" className="sketch-btn">
                 Add
               </button>
             </form>
@@ -246,9 +262,9 @@ export function ShareDialog({
                 {inherited.map((i) =>
                   i.grants.map((g) => (
                     <li key={g.id}>
-                      <span>{principalLabel(g.principal)}</span>
-                      <span className="badge">{ROLE_LABEL[g.role]}</span>
-                      <span className="muted">from {folderLabel(i.from)}</span>
+                      <span className="share__who">{principalLabel(g.principal)}</span>
+                      <RoleMark role={g.role} />
+                      <span className="share__from">from {folderLabel(i.from)}</span>
                     </li>
                   )),
                 )}

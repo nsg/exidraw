@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router";
 import { SPA_ROUTES } from "@exidraw/shared";
 import { SessionProvider, useSession } from "./session";
 import { ToastProvider } from "./components/Toasts";
+import { Splash, StatusPage } from "./components/StatusPage";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./pages/LoginPage";
 import { FolderPage } from "./pages/FolderPage";
@@ -27,15 +28,15 @@ function AppRoutes() {
   const { state, refresh } = useSession();
   const location = useLocation();
 
-  if (state.status === "loading") return <div className="splash">Loading…</div>;
+  if (state.status === "loading") return <Splash />;
   if (state.status === "error") {
     return (
-      <div className="splash">
-        <p>Could not reach the server: {state.message}</p>
-        <button className="btn" onClick={() => void refresh()}>
+      <StatusPage title="Could not reach the server" doodle="offline">
+        <p className="status-page__text">{state.message}</p>
+        <button className="sketch-btn sketch-btn--primary" onClick={() => void refresh()}>
           Retry
         </button>
-      </div>
+      </StatusPage>
     );
   }
 
@@ -55,7 +56,7 @@ function AppRoutes() {
       <Route
         path="/r/:roomId"
         element={
-          <Suspense fallback={<div className="splash">Loading…</div>}>
+          <Suspense fallback={<Splash />}>
             <RoomPage />
           </Suspense>
         }

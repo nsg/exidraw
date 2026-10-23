@@ -6,6 +6,7 @@ import { api, errorMessage } from "../api";
 import { ConfirmDialog } from "../components/Modal";
 import { useToast } from "../components/Toasts";
 import { formatDate, formatRelative } from "../util";
+import { CrossIcon, PencilLoader, PencilRule } from "../sketch/Paper";
 
 const REASON_LABEL: Record<SnapshotReason, string> = {
   auto: "Autosave",
@@ -68,49 +69,60 @@ export function HistoryDrawer({ roomId, canRestore, excalidraw, onClose }: Props
 
   return (
     <aside className="drawer" aria-label="Version history">
-      <div className="drawer__header">
-        <h2>Version history</h2>
-        <button className="icon-btn" aria-label="Close history" onClick={onClose}>
-          ×
-        </button>
-      </div>
-      {canRestore && (
-        <button className="btn btn--block" disabled={busy} onClick={() => void saveNow()}>
-          Save current version
-        </button>
-      )}
-      {selected && <SnapshotPreview roomId={roomId} snapshot={selected} excalidraw={excalidraw} />}
-      {!snapshots && <p className="muted">Loading…</p>}
-      {snapshots?.length === 0 && <p className="muted">No versions yet. Versions are saved automatically every few minutes while people edit.</p>}
-      <ul className="drawer__list">
-        {snapshots?.map((s) => (
-          <li key={s.id} className={selected?.id === s.id ? "selected" : ""}>
-            <button className="drawer__item" onClick={() => setSelected(selected?.id === s.id ? null : s)}>
-              <span className="drawer__when" title={formatDate(s.createdAt)}>
-                {formatRelative(s.createdAt)}
-              </span>
-              <span className="muted">
-                {REASON_LABEL[s.reason]}
-                {s.createdBy ? ` · ${s.createdBy.name}` : ""} · {s.elementCount} element{s.elementCount === 1 ? "" : "s"}
-              </span>
-            </button>
-            {canRestore && selected?.id === s.id && (
-              <button className="btn btn--primary" onClick={() => setConfirming(s)}>
-                Restore this version
+      <PencilRule id="drawer-edge" double vertical className="drawer__edge" />
+      <div className="drawer__in">
+        <div className="drawer__header">
+          <h2 className="drawer__title">Version history</h2>
+          <button className="close-btn" aria-label="Close history" onClick={onClose}>
+            <CrossIcon />
+          </button>
+        </div>
+        {canRestore && (
+          <button className="sketch-btn drawer__save" disabled={busy} onClick={() => void saveNow()}>
+            Save current version
+          </button>
+        )}
+        {selected && <SnapshotPreview roomId={roomId} snapshot={selected} excalidraw={excalidraw} />}
+        {!snapshots && <PencilLoader className="pencil-loader--small" />}
+        {snapshots?.length === 0 && (
+          <p className="drawer__none">No versions yet. Versions are saved automatically every few minutes while people edit.</p>
+        )}
+        <ul className="drawer__list">
+          {snapshots?.map((s) => (
+            <li key={s.id} className={selected?.id === s.id ? "selected" : ""}>
+              <PencilRule id={`snapshot:${s.id}`} />
+              <button
+                className="drawer__item"
+                aria-pressed={selected?.id === s.id}
+                onClick={() => setSelected(selected?.id === s.id ? null : s)}
+              >
+                <span className="drawer__swipe" aria-hidden />
+                <span className="drawer__when" title={formatDate(s.createdAt)}>
+                  {formatRelative(s.createdAt)}
+                </span>
+                <span className="drawer__meta">
+                  {REASON_LABEL[s.reason]}
+                  {s.createdBy ? ` · ${s.createdBy.name}` : ""} · {s.elementCount} element{s.elementCount === 1 ? "" : "s"}
+                </span>
               </button>
-            )}
-          </li>
-        ))}
-      </ul>
-      {confirming && (
-        <ConfirmDialog
-          title="Restore version"
-          message={`Replace the drawing with the version from ${formatDate(confirming.createdAt)}? The current state is saved as a version first, so this can be undone.`}
-          confirmLabel="Restore"
-          onClose={() => setConfirming(null)}
-          onConfirm={() => restore(confirming)}
-        />
-      )}
+              {canRestore && selected?.id === s.id && (
+                <button className="sketch-btn sketch-btn--primary drawer__restore" onClick={() => setConfirming(s)}>
+                  Restore this version
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+        {confirming && (
+          <ConfirmDialog
+            title="Restore version"
+            message={`Replace the drawing with the version from ${formatDate(confirming.createdAt)}? The current state is saved as a version first, so this can be undone.`}
+            confirmLabel="Restore"
+            onClose={() => setConfirming(null)}
+            onConfirm={() => restore(confirming)}
+          />
+        )}
+      </div>
     </aside>
   );
 }
@@ -143,7 +155,8 @@ function SnapshotPreview({ roomId, snapshot, excalidraw }: { roomId: string; sna
 
   return (
     <div className="drawer__preview">
-      {error ? <p className="muted">{error}</p> : <div ref={ref} className="drawer__svg" />}
+      <div className="drawer__preview-tape" aria-hidden />
+      {error ? <p className="drawer__none">{error}</p> : <div ref={ref} className="drawer__svg" />}
     </div>
   );
 }

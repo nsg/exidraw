@@ -1,4 +1,11 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { CrossIcon, PencilOutline, PencilRule, sheetRoughness, useElementSize } from "../sketch/Paper";
+
+/**
+ * How far the sheet's decoration reaches past its edges: the tape (15px above),
+ * the pencil outline (6px), the tilt. Presses there are on the sheet, not beside it.
+ */
+const DECORATION_REACH = 20;
 
 interface ModalProps {
   title: string;
@@ -8,9 +15,16 @@ interface ModalProps {
   wide?: boolean;
 }
 
-/** Native <dialog> modal: focus trap, Esc and backdrop handling come for free. */
+/**
+ * Native <dialog> modal: focus trap, Esc and backdrop handling come for free.
+ * It is a taped sheet of paper outlined in pencil; the <dialog> itself is the
+ * transparent backdrop around it, so a press beside the sheet closes it.
+ */
 export function Modal({ title, onClose, children, footer, wide }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const sheet = useRef<HTMLDivElement>(null);
+  // The outline follows the sheet as its content loads and changes.
+  const size = useElementSize(sheet);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -34,17 +48,34 @@ export function Modal({ title, onClose, children, footer, wide }: ModalProps) {
       className={`modal${wide ? " modal--wide" : ""}`}
       aria-label={title}
       onMouseDown={(e) => {
-        if (e.target === ref.current) onClose();
+        const dialog = ref.current!;
+        if (e.target !== dialog) return;
+        // The dialog's own scrollbar, when a tall sheet scrolls, is not the backdrop either.
+        const box = dialog.getBoundingClientRect();
+        if (e.clientX >= box.left + dialog.clientWidth || e.clientY >= box.top + dialog.clientHeight) return;
+        const r = sheet.current!.getBoundingClientRect();
+        const d = DECORATION_REACH;
+        const onSheet = e.clientX >= r.left - d && e.clientX <= r.right + d && e.clientY >= r.top - d && e.clientY <= r.bottom + d;
+        if (!onSheet) onClose();
       }}
     >
-      <div className="modal__header">
-        <h2>{title}</h2>
-        <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
-          ×
-        </button>
+      <div className="modal__sheet" ref={sheet}>
+        <div className="modal__tape" aria-hidden />
+        {size && <PencilOutline size={size} className="modal__border" roughness={sheetRoughness(size)} />}
+        <div className="modal__header">
+          <h2 className="modal__title">{title}</h2>
+          <button type="button" className="close-btn" aria-label="Close" onClick={onClose}>
+            <CrossIcon />
+          </button>
+        </div>
+        <div className="modal__body">{children}</div>
+        {footer && (
+          <div className="modal__footer">
+            <PencilRule id={`modal-foot:${title}`} />
+            {footer}
+          </div>
+        )}
       </div>
-      <div className="modal__body">{children}</div>
-      {footer && <div className="modal__footer">{footer}</div>}
     </dialog>
   );
 }
@@ -79,14 +110,14 @@ export function PromptDialog({ title, label, initial = "", submitLabel, onSubmit
         }}
       >
         <label className="field">
-          <span>{label}</span>
-          <input ref={inputRef} defaultValue={initial} autoFocus required maxLength={120} />
+          <span className="field__label">{label}</span>
+          <input ref={inputRef} className="sketch-input" defaultValue={initial} autoFocus required maxLength={120} />
         </label>
         <div className="form__actions">
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="sketch-btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn--primary">
+          <button type="submit" className="sketch-btn sketch-btn--primary">
             {submitLabel}
           </button>
         </div>
@@ -111,12 +142,12 @@ export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm,
       onClose={onClose}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="sketch-btn" onClick={onClose}>
             Cancel
           </button>
           <button
             type="button"
-            className={`btn ${danger ? "btn--danger" : "btn--primary"}`}
+            className={`sketch-btn ${danger ? "sketch-btn--danger" : "sketch-btn--primary"}`}
             autoFocus
             onClick={() => void onConfirm()}
           >
@@ -125,7 +156,7 @@ export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm,
         </>
       }
     >
-      <p>{message}</p>
+      <p className="modal__message">{message}</p>
     </Modal>
   );
 }

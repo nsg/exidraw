@@ -4,6 +4,8 @@ import { api, errorMessage } from "../api";
 import { ConfirmDialog } from "../components/Modal";
 import { useToast } from "../components/Toasts";
 import { copyText, formatDate, formatRelative } from "../util";
+import { CopyIcon, PlusIcon } from "../folder/icons";
+import { PencilLoader, PencilRule, Scribble, SheetOnBoard } from "../sketch/Paper";
 
 const TOKEN_PLACEHOLDER = "<your-token>";
 
@@ -55,114 +57,129 @@ export function TokensPage() {
   const mcpUrl = window.location.origin + MCP_PATH;
 
   return (
-    <div className="tokens-page narrow">
-      <div className="page-header">
-        <h1>Access tokens</h1>
-      </div>
-      <p className="muted">
-        Personal access tokens let scripts and AI agents act as you through the API and the MCP endpoint{" "}
-        <code>{mcpUrl}</code>. A token has exactly your permissions; revoke it when it is no longer needed.
-      </p>
+    <div className="board-page tokens-page">
+      <SheetOnBoard width="narrow">
+        <div className="sheet__head">
+          <h1 className="sheet__title">
+            <Scribble>Access tokens</Scribble>
+          </h1>
+        </div>
+        <p className="tokens__lead">
+          Personal access tokens let scripts and AI agents act as you through the API and the MCP endpoint{" "}
+          <code>{mcpUrl}</code>. A token has exactly your permissions; revoke it when it is no longer needed.
+        </p>
 
-      <form
-        className="card token-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void create();
-        }}
-      >
-        <label className="field">
-          <span>Token name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Claude agent"
-            maxLength={120}
-            required
-          />
-        </label>
-        <label className="field">
-          <span>Expires</span>
-          <select value={expiry} onChange={(e) => setExpiry(Number(e.target.value))}>
-            {EXPIRY_OPTIONS.map((o) => (
-              <option key={o.days} value={o.days}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit" className="btn btn--primary" disabled={busy || !name.trim()}>
-          Create token
-        </button>
-      </form>
+        <form
+          className="token-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void create();
+          }}
+        >
+          <label className="field token-form__name">
+            <span className="field__label">Token name</span>
+            <input
+              className="sketch-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Claude agent"
+              maxLength={120}
+              required
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">Expires</span>
+            <select className="sketch-select" value={expiry} onChange={(e) => setExpiry(Number(e.target.value))}>
+              {EXPIRY_OPTIONS.map((o) => (
+                <option key={o.days} value={o.days}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="sketch-btn sketch-btn--primary" disabled={busy || !name.trim()}>
+            <PlusIcon />
+            Create token
+          </button>
+        </form>
 
-      {created && (
-        <div className="card token-created" data-testid="token-created">
-          <strong>Copy your new token now. It will not be shown again.</strong>
-          <div className="token-created__value">
-            <code data-testid="token-value">{created.token}</code>
-            <button
-              className="btn"
-              onClick={async () => {
-                if (await copyText(created.token)) notify("Token copied", "success");
-              }}
-            >
-              Copy
+        {created && (
+          <div className="token-created" data-testid="token-created">
+            <p className="token-created__title">Copy your new token now. It will not be shown again.</p>
+            <div className="token-created__value">
+              <code data-testid="token-value">{created.token}</code>
+              <button
+                className="sketch-btn"
+                onClick={async () => {
+                  if (await copyText(created.token)) notify("Token copied", "success");
+                }}
+              >
+                <CopyIcon />
+                Copy
+              </button>
+            </div>
+            <AgentSetup token={created.token} />
+            <button className="sketch-btn sketch-btn--quiet" onClick={() => setCreated(null)}>
+              Done
             </button>
           </div>
-          <AgentSetup token={created.token} />
-          <button className="btn btn--ghost" onClick={() => setCreated(null)}>
-            Done
-          </button>
-        </div>
-      )}
+        )}
 
-      {!created && (
-        <section className="agent-help">
-          <h2>Connect an agent</h2>
-          <p className="muted">
-            Create a token above, then register the MCP endpoint with your agent. Replace <code>{TOKEN_PLACEHOLDER}</code>{" "}
-            with the token.
-          </p>
-          <AgentSetup token={null} />
-        </section>
-      )}
+        {!created && (
+          <section className="agent-help">
+            <h2 className="tokens__section">Connect an agent</h2>
+            <p>
+              Create a token above, then register the MCP endpoint with your agent. Replace <code>{TOKEN_PLACEHOLDER}</code>{" "}
+              with the token.
+            </p>
+            <AgentSetup token={null} />
+          </section>
+        )}
 
-      <h2>Your tokens</h2>
-      {!tokens && <p className="muted">Loading…</p>}
-      {tokens?.length === 0 && <p className="muted">You have no active tokens.</p>}
-      {tokens && tokens.length > 0 && (
-        <table className="nodes">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Token</th>
-              <th>Created</th>
-              <th>Last used</th>
-              <th>Expires</th>
-              <th aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {tokens.map((t) => (
-              <tr key={t.id} data-testid="token-row">
-                <td>{t.name}</td>
-                <td>
-                  <code>{t.prefix}…</code>
-                </td>
-                <td title={formatDate(t.createdAt)}>{formatRelative(t.createdAt)}</td>
-                <td>{t.lastUsedAt ? formatRelative(t.lastUsedAt) : <span className="muted">never</span>}</td>
-                <td>{t.expiresAt ? formatDate(t.expiresAt) : <span className="muted">never</span>}</td>
-                <td className="nodes__actions">
-                  <button className="btn btn--danger-ghost" onClick={() => setRevoking(t)}>
-                    Revoke
-                  </button>
-                </td>
+        <h2 className="tokens__section">Your tokens</h2>
+        {!tokens && <PencilLoader className="pencil-loader--small" />}
+        {tokens?.length === 0 && <p className="tokens__none">You have no active tokens.</p>}
+        {tokens && tokens.length > 0 && (
+          <table className="ruled-table tokens-table">
+            <thead>
+              <tr>
+                <th>
+                  Name
+                  <PencilRule id="tokens-head" double />
+                </th>
+                <th>Token</th>
+                <th>Created</th>
+                <th>Last used</th>
+                <th>Expires</th>
+                <th aria-label="Actions" />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {tokens.map((t) => (
+                <tr key={t.id} data-testid="token-row">
+                  <td className="tokens-table__name">
+                    <PencilRule id={t.id} />
+                    {t.name}
+                  </td>
+                  <td className="tokens-table__prefix">
+                    <code>{t.prefix}…</code>
+                  </td>
+                  <td data-label="created" title={formatDate(t.createdAt)}>
+                    {formatRelative(t.createdAt)}
+                  </td>
+                  <td data-label="last used">{t.lastUsedAt ? formatRelative(t.lastUsedAt) : <span className="muted">never</span>}</td>
+                  <td data-label="expires">{t.expiresAt ? formatDate(t.expiresAt) : <span className="muted">never</span>}</td>
+                  <td className="tokens-table__actions">
+                    <button className="sketch-btn sketch-btn--small sketch-btn--danger-ink" onClick={() => setRevoking(t)}>
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </SheetOnBoard>
 
       {revoking && (
         <ConfirmDialog
@@ -215,15 +232,16 @@ function Snippet({ label, text }: { label: string; text: string }) {
   return (
     <div className="snippet">
       <div className="snippet__header">
-        <span>{label}</span>
+        <span className="snippet__label">{label}</span>
         <button
           type="button"
-          className="btn btn--ghost"
+          className="sketch-btn sketch-btn--small"
           aria-label={`Copy ${label}`}
           onClick={async () => {
             if (await copyText(text)) notify("Copied", "success");
           }}
         >
+          <CopyIcon />
           Copy
         </button>
       </div>

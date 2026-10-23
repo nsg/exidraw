@@ -3,7 +3,10 @@ import { SPA_ROUTES, type RoomInfo, type SearchResponse, type TreeResponse } fro
 import { api, errorMessage } from "../api";
 import { Modal } from "../components/Modal";
 import { absoluteUrl } from "../util";
-import { FolderIcon, PickerBreadcrumbs, RoomIcon } from "../components/MoveDialog";
+import { PickerBreadcrumbs } from "../components/MoveDialog";
+import { DrawingSketch, FolderSketch } from "../folder/Sheet";
+import { SearchIcon, UploadIcon } from "../folder/icons";
+import { PencilLoader, PencilRule } from "../sketch/Paper";
 import {
   DRAWING_FILE_ACCEPT,
   ImportError,
@@ -59,13 +62,14 @@ export function InsertDialog({ room, onInsert, onClose }: InsertDialogProps) {
       wide
       onClose={onClose}
       footer={
-        <button type="button" className="btn" onClick={onClose}>
+        <button type="button" className="sketch-btn" onClick={onClose}>
           Cancel
         </button>
       }
     >
       <div className="insert">
         <div className="tabs" role="tablist">
+          <PencilRule id="insert-tabs" />
           <button type="button" role="tab" className="tabs__tab" aria-selected={source === "file"} onClick={() => setSource("file")}>
             From a file
           </button>
@@ -82,7 +86,7 @@ export function InsertDialog({ room, onInsert, onClose }: InsertDialogProps) {
         {error && <div className="alert alert--error">{error}</div>}
         {source === "file" ? (
           <div className="insert__file">
-            <p className="muted">An .excalidraw file, or a PNG or SVG exported from Excalidraw with the scene embedded.</p>
+            <p>An .excalidraw file, or a PNG or SVG exported from Excalidraw with the scene embedded.</p>
             <input
               ref={fileInput}
               type="file"
@@ -95,7 +99,13 @@ export function InsertDialog({ room, onInsert, onClose }: InsertDialogProps) {
                 if (file) void insert(drawingNameFromFile(file.name), () => parseDrawingFile(file));
               }}
             />
-            <button type="button" className="btn btn--primary" disabled={!!busy} onClick={() => fileInput.current?.click()}>
+            <button
+              type="button"
+              className="sketch-btn sketch-btn--primary"
+              disabled={!!busy}
+              onClick={() => fileInput.current?.click()}
+            >
+              <UploadIcon />
               Choose file…
             </button>
           </div>
@@ -112,7 +122,7 @@ export function InsertDialog({ room, onInsert, onClose }: InsertDialogProps) {
             }
           />
         )}
-        {busy && <p className="muted">{busy}</p>}
+        {busy && <PencilLoader label={busy} className="pencil-loader--small" />}
       </div>
     </Modal>
   );
@@ -170,18 +180,25 @@ function DrawingPicker({
   const listing = results ?? tree;
   return (
     <div className="picker">
-      <input
-        className="search"
-        type="search"
-        placeholder="Search drawings…"
-        aria-label="Search drawings"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      <label className="search-field">
+        <SearchIcon />
+        <input
+          className="sketch-input"
+          type="search"
+          placeholder="Search drawings…"
+          aria-label="Search drawings"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
       {!results && tree && <PickerBreadcrumbs tree={tree} onOpen={setFolderId} />}
       {error && <div className="alert alert--error">{error}</div>}
       <ul className="picker__list">
-        {!listing && <li className="muted">Loading…</li>}
+        {!listing && (
+          <li className="picker__none">
+            <PencilLoader className="pencil-loader--small" />
+          </li>
+        )}
         {listing?.folders.map((f) => (
           <li key={f.id}>
             <button
@@ -192,20 +209,22 @@ function DrawingPicker({
                 setFolderId(f.id);
               }}
             >
-              <FolderIcon /> {f.name}
+              <FolderSketch id={f.id} />
+              <span className="picker__name">{f.name}</span>
             </button>
           </li>
         ))}
         {listing?.rooms.map((r) => (
           <li key={r.id}>
             <button type="button" className="picker__item" disabled={disabled} onClick={() => onPick(r)}>
-              <RoomIcon /> {r.name}
-              {r.id === currentRoomId && <span className="muted">(this drawing)</span>}
+              <DrawingSketch id={r.id} />
+              <span className="picker__name">{r.name}</span>
+              {r.id === currentRoomId && <span className="picker__note">(this drawing)</span>}
             </button>
           </li>
         ))}
         {listing && listing.folders.length + listing.rooms.length === 0 && (
-          <li className="muted">{results ? "Nothing matches your search." : "This folder is empty."}</li>
+          <li className="picker__none">{results ? "Nothing matches your search." : "This folder is empty."}</li>
         )}
       </ul>
     </div>
